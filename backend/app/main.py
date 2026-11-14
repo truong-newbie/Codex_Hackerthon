@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .database import engine, Base
 from .services.ai_service import ai_service
-from .routers import auth_router, sops_router, admin_router, training_router
+from .routers import auth_router, sops_router, admin_router, training_router, studio_router
 
 # Initialize Database Tables
 Base.metadata.create_all(bind=engine)
@@ -40,6 +40,7 @@ app.include_router(auth_router.router)
 app.include_router(sops_router.router)
 app.include_router(admin_router.router)
 app.include_router(training_router.router)
+app.include_router(studio_router.router)
 
 if __name__ == "__main__":
     import uvicorn
