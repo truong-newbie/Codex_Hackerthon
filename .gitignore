@@ -36,6 +36,7 @@ mobile/android/.idea/
 mobile/android/*.iml
 mobile/android/app/*.iml
 *.apk
+!releases/*.apk
 *.aab
 
 # Environment variables & secrets
