@@ -107,17 +107,32 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Tài liệu API tương tác (Swagger UI): `http://localhost:8000/docs`
 - Kiểm tra trạng thái AI: `http://localhost:8000/v1/health`
 
-### 4.2. Khởi chạy Ứng dụng Mobile Android (Expo)
+### 4.2. Khởi chạy Ứng dụng Mobile Android (Expo & Android Studio)
 ```bash
 cd mobile
 
 # Cài đặt thư viện:
 npm install
 
+# Tuỳ chọn đặt URL Backend mặc định qua biến môi trường (xem mobile/.env.example):
+# EXPO_PUBLIC_API_URL=http://192.168.1.xxx:8000
+
 # Chạy ở chế độ phát triển:
 npx expo start
+```
 
-# Build file APK độc lập cài trực tiếp lên điện thoại Android:
+#### Cách 1: Mở và Build trực tiếp bằng Android Studio (Local Gradle — Khuyên dùng)
+Thư mục native `mobile/android/` đã được sinh sẵn bằng `npx expo prebuild --platform android` và lưu trong repository (kèm cấu hình `android:usesCleartextTraffic="true"` để gọi LAN HTTP trên điện thoại thật):
+1. Mở **Android Studio** → **Open** → chọn thư mục `mobile/android`.
+2. Chờ **Gradle Sync** hoàn tất.
+3. Build APK từ Android Studio hoặc chạy lệnh Gradle từ `mobile/android`:
+   - Bản Debug: `./gradlew :app:assembleDebug` → File APK tại `mobile/android/app/build/outputs/apk/debug/app-debug.apk`
+   - Bản Release độc lập (nhúng sẵn JS bundle, không cần Metro): `./gradlew :app:assembleRelease` → File APK tại `mobile/android/app/build/outputs/apk/release/app-release.apk`
+4. Lưu ý kết nối mạng trên điện thoại thật: Dùng địa chỉ IP LAN của máy chạy FastAPI (ví dụ `http://192.168.1.xxx:8000`) hoặc HTTPS tunnel. Có thể sửa trực tiếp tại ô **Server URL** ngay trên màn hình Đăng nhập (tự động lưu qua `AsyncStorage` kể cả sau khi Force-Stop).
+
+#### Cách 2: Build APK qua đám mây (EAS Build)
+```bash
+cd mobile
 eas build -p android --profile preview
 ```
 

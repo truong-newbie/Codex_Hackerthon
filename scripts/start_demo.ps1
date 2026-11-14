@@ -1,4 +1,4 @@
-﻿# ShiftLens One-Click Demo Launcher (Auto-detects LAN IP for Real Android Phone)
+# ShiftLens One-Click Demo Launcher (Auto-detects LAN IP for Real Android Phone)
 $ErrorActionPreference = "Continue"
 $rootDir = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $rootDir "backend"

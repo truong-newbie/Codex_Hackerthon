@@ -36,12 +36,31 @@ description: Hướng dẫn phát triển ứng dụng di động Android bằng
    - Chi tiết từng tiêu chí: Điểm, Trạng thái, Lời nhận xét, và **Đoạn trích dẫn nguyên văn bằng chứng (`exact_quote`)**.
    - Lời khuyên rèn luyện tiếp theo (`coaching_tip`).
 
-## 4. Cách chạy và build APK
+## 4. Cách chạy và build APK (Android Studio Gradle & EAS)
+
+### 4.1. Chạy phát triển & Cấu hình API URL
 ```bash
 cd mobile
 npm install
-# Chạy môi trường phát triển (Expo)
+# Có thể cấu hình biến môi trường EXPO_PUBLIC_API_URL (xem mobile/.env.example)
+# hoặc đổi trực tiếp tại ô Server URL trên LoginScreen (lưu vào AsyncStorage)
 npx expo start
-# Build APK độc lập qua EAS Build:
+```
+- **Emulator Android**: Gọi máy host qua `http://10.0.2.2:8000`.
+- **Điện thoại Android thật**: Gọi qua IP LAN của máy chạy FastAPI (`http://192.168.1.xxx:8000`) hoặc HTTPS tunnel. Plugin `mobile/plugins/withCleartextTraffic.js` đã bật `android:usesCleartextTraffic="true"` trong `AndroidManifest.xml` cho cả bản Debug và Release.
+
+### 4.2. Mở và Build bằng Android Studio (`mobile/android`)
+Project Gradle native tại `mobile/android/` đã được sinh sẵn và lưu trong Git:
+1. Mở **Android Studio** → **Open** → chọn thư mục `mobile/android` và chờ **Gradle Sync**.
+2. Chạy task Gradle `:app:assembleDebug` → APK sinh ra tại:
+   `mobile/android/app/build/outputs/apk/debug/app-debug.apk`
+3. Để tạo APK chạy độc lập không cần Metro bundler, chạy `:app:assembleRelease` → APK sinh ra tại:
+   `mobile/android/app/build/outputs/apk/release/app-release.apk`
+4. Nếu có thay đổi cấu hình Expo/native plugin trong `mobile/app.json`, chạy lại:
+   `npx expo prebuild --platform android` trước khi sync/build trong Android Studio.
+
+### 4.3. Build APK qua EAS Cloud (Tuỳ chọn dự phòng)
+```bash
+cd mobile
 eas build -p android --profile preview
 ```
