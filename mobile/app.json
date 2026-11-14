@@ -13,7 +13,8 @@
       }
     },
     "plugins": [
-      "./plugins/withCleartextTraffic"
+      "./plugins/withCleartextTraffic",
+      "expo-asset"
     ],
     "web": {
       "bundler": "metro"
