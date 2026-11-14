@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
   FlatList, ActivityIndicator, Alert, SafeAreaView, 
-  KeyboardAvoidingView, Platform 
+  KeyboardAvoidingView, Platform, ScrollView 
 } from 'react-native';
 import * as Speech from 'expo-speech';
 import { api } from '../api/client';
-import { TrainingSessionResponse, FinalResultResponse } from '../api/types';
+import { TrainingSessionResponse, FinalResultResponse, TurnDetail } from '../api/types';
 
 interface MessageItem {
   id: string;
@@ -17,44 +17,84 @@ interface MessageItem {
 
 interface SimulationScreenProps {
   session: TrainingSessionResponse;
+  initialTurns?: TurnDetail[];
   onFinish: (result: FinalResultResponse) => void;
   onBack: () => void;
 }
 
-export const SimulationScreen: React.FC<SimulationScreenProps> = ({ session, onFinish, onBack }) => {
-  const [messages, setMessages] = useState<MessageItem[]>([
-    {
-      id: 'msg-0',
-      sender: 'customer',
-      text: session.module.opening_message,
-      turnNo: 0,
+export const SimulationScreen: React.FC<SimulationScreenProps> = ({ 
+  session, 
+  initialTurns = [], 
+  onFinish, 
+  onBack 
+}) => {
+  const buildInitialMessages = (): MessageItem[] => {
+    const base: MessageItem[] = [
+      {
+        id: 'msg-0',
+        sender: 'customer',
+        text: session.module.opening_message,
+        turnNo: 0,
+      }
+    ];
+    for (const t of initialTurns) {
+      base.push({
+        id: `emp-init-${t.turn_no}`,
+        sender: 'employee',
+        text: t.employee_text,
+        turnNo: t.turn_no,
+      });
+      base.push({
+        id: `cust-init-${t.turn_no}`,
+        sender: 'customer',
+        text: t.customer_text,
+        turnNo: t.turn_no,
+      });
     }
-  ]);
+    return base;
+  };
+
+  const [messages, setMessages] = useState<MessageItem[]>(buildInitialMessages);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
-  const [turnsCount, setTurnsCount] = useState(0);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [turnsCount, setTurnsCount] = useState(initialTurns.length || session.turns_count || 0);
+  const [lastLatency, setLastLatency] = useState<number | undefined>(session.latency_ms);
   const flatListRef = useRef<FlatList>(null);
 
-  // Auto speak customer opening message
   useEffect(() => {
-    speakText(session.module.opening_message);
+    if (initialTurns.length === 0) {
+      speakText(session.module.opening_message);
+    }
+    return () => {
+      try { Speech.stop(); } catch (_) {}
+    };
   }, []);
 
   const speakText = (text: string) => {
     try {
       Speech.stop();
-      setIsPlayingAudio(true);
       Speech.speak(text, {
         language: 'vi-VN',
         pitch: 1.0,
         rate: 0.95,
-        onDone: () => setIsPlayingAudio(false),
-        onError: () => setIsPlayingAudio(false),
       });
-    } catch (_) {
-      setIsPlayingAudio(false);
+    } catch (_) {}
+  };
+
+  const fillQuickReply = (type: 'pass_a' | 'pass_b' | 'critical_fail') => {
+    if (type === 'pass_a') {
+      setInputText(
+        'Dạ em rất xin lỗi anh vì sự cố ly cà phê bị mặn ạ. Em xin phép kiểm tra lại hóa đơn và pha lại ngay một ly mới đúng chuẩn cho anh, còn việc hoàn tiền em xin phép báo quản lý hỗ trợ anh ngay nhé ạ!'
+      );
+    } else if (type === 'pass_b') {
+      setInputText(
+        'Dạ em rất xin lỗi anh về trải nghiệm chưa tốt này ạ. Để em kiểm tra lại ly nước, em xin phép pha lại ngay ly mới cho anh, gửi tặng anh thêm bánh quy và voucher 50.000đ cho lần sau ạ. Cảm ơn anh nhiều ạ!'
+      );
+    } else {
+      setInputText(
+        'Dạ em xin lỗi anh, em kiểm tra hóa đơn rồi ạ. Để em tự rút két hoàn tiền 100% lại luôn cho anh ngay bây giờ không cần hỏi ai đâu ạ!'
+      );
     }
   };
 
@@ -62,11 +102,10 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({ session, onF
     const textToSend = inputText.trim();
     if (!textToSend) return;
     if (turnsCount >= 4) {
-      Alert.alert('Thông báo', 'Đã đạt giới hạn tối đa 4 lượt. Vui lòng nhấn Nhận đánh giá.');
+      Alert.alert('Thông báo', 'Đã đạt giới hạn tối đa 4 lượt. Vui lòng nhấn Chấm điểm.');
       return;
     }
 
-    // Add employee message to local list immediately
     const empMsgId = `emp-${Date.now()}`;
     const newMessages: MessageItem[] = [
       ...messages,
@@ -84,6 +123,9 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({ session, onF
         { id: custMsgId, sender: 'customer', text: res.customer_text, turnNo: res.turn_no }
       ]);
       setTurnsCount(res.turn_no);
+      if (res.latency_ms !== undefined) {
+        setLastLatency(res.latency_ms);
+      }
       speakText(res.customer_text);
     } catch (err: any) {
       Alert.alert('Lỗi gửi tin', err.message);
@@ -118,7 +160,7 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({ session, onF
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>✕ Thoát</Text>
+            <Text style={styles.backBtnText}>← SOP</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>{session.sop_title}</Text>
@@ -137,9 +179,17 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({ session, onF
           </TouchableOpacity>
         </View>
 
+        {/* Technical Telemetry Proof Bar (G1, G2, G3) */}
+        <View style={styles.telemetryBar}>
+          <Text style={styles.telemetryText}>
+            {session.ai_mode === 'live' ? '🟢 AI: LIVE' : '🟠 AI: STUB'}  |  📌 Pinned: v{session.sop_version_no || 1} ({session.sop_version_id})
+            {lastLatency !== undefined ? `  |  ⚡ ${lastLatency}ms` : ''}
+          </Text>
+        </View>
+
         {/* Situation / Context Card */}
         <View style={styles.situationCard}>
-          <Text style={styles.situationLabel}>📌 Bối cảnh tình huống:</Text>
+          <Text style={styles.situationLabel}>📌 Bối cảnh & Chính sách áp dụng:</Text>
           <Text style={styles.situationText}>{session.module.situation}</Text>
           <Text style={styles.objectiveText}>🎯 Mục tiêu: {session.module.learning_objective}</Text>
         </View>
@@ -169,7 +219,7 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({ session, onF
                       style={styles.speakerBtn} 
                       onPress={() => speakText(item.text)}
                     >
-                      <Text style={styles.speakerIcon}>🔊 Nghe</Text>
+                      <Text style={styles.speakerIcon}>🔊 Nghe TTS</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -178,6 +228,23 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({ session, onF
             </View>
           )}
         />
+
+        {/* Quick Reply Helper Chips for Smooth Live Stage Demo */}
+        {turnsCount < 4 && (
+          <View style={styles.quickChipsContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+              <TouchableOpacity style={styles.chipPass} onPress={() => fillQuickReply('pass_a')}>
+                <Text style={styles.chipText}>✨ Mẫu chuẩn Café A (Xin phép Quản lý)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.chipPassB} onPress={() => fillQuickReply('pass_b')}>
+                <Text style={styles.chipText}>🌿 Mẫu chuẩn Café B (Đổi ly + Bánh/Voucher)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.chipFail} onPress={() => fillQuickReply('critical_fail')}>
+                <Text style={styles.chipText}>⚠️ Thử vi phạm Critical (Tự ý hoàn tiền)</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
 
         {/* Input Bar */}
         <View style={styles.inputContainer}>
@@ -219,19 +286,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: '#1E293B',
     borderBottomWidth: 1,
     borderBottomColor: '#334155',
   },
   backBtn: {
-    padding: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#334155',
+    borderRadius: 6,
   },
   backBtnText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontWeight: '700',
   },
   headerCenter: {
     flex: 1,
@@ -240,12 +310,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#F8FAFC',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
   turnIndicator: {
     color: '#38BDF8',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -257,43 +327,59 @@ const styles = StyleSheet.create({
   },
   evalBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   disabledBtn: {
     opacity: 0.5,
   },
+  telemetryBar: {
+    backgroundColor: '#020617',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+    alignItems: 'center',
+  },
+  telemetryText: {
+    color: '#38BDF8',
+    fontSize: 10,
+    fontFamily: 'monospace',
+    fontWeight: '600',
+  },
   situationCard: {
     backgroundColor: '#1E293B',
-    margin: 12,
-    padding: 12,
+    marginHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 6,
+    padding: 10,
     borderRadius: 8,
     borderLeftWidth: 3,
     borderLeftColor: '#F59E0B',
   },
   situationLabel: {
     color: '#F59E0B',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   situationText: {
     color: '#F1F5F9',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
   },
   objectiveText: {
     color: '#94A3B8',
-    fontSize: 12,
-    marginTop: 6,
+    fontSize: 11,
+    marginTop: 4,
     fontStyle: 'italic',
   },
   messageList: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
   },
   bubbleWrapper: {
-    marginVertical: 6,
+    marginVertical: 5,
     flexDirection: 'row',
   },
   custWrapper: {
@@ -303,8 +389,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   bubble: {
-    maxWidth: '82%',
-    padding: 12,
+    maxWidth: '84%',
+    padding: 11,
     borderRadius: 14,
   },
   custBubble: {
@@ -319,11 +405,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 5,
     gap: 8,
   },
   senderName: {
-    color: '#94A3B8',
+    color: '#CBD5E1',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -335,46 +421,85 @@ const styles = StyleSheet.create({
   },
   speakerIcon: {
     color: '#38BDF8',
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
   },
   messageText: {
     color: '#F8FAFC',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  quickChipsContainer: {
+    backgroundColor: '#0F172A',
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
+  },
+  chipsScroll: {
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  chipPass: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  chipPassB: {
+    backgroundColor: '#064E3B',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  chipFail: {
+    backgroundColor: '#450A0A',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  chipText: {
+    color: '#F8FAFC',
+    fontSize: 11,
+    fontWeight: '600',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
     backgroundColor: '#1E293B',
     borderTopWidth: 1,
     borderTopColor: '#334155',
-    gap: 10,
+    gap: 8,
   },
   textInput: {
     flex: 1,
     backgroundColor: '#0F172A',
     borderWidth: 1,
     borderColor: '#334155',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     color: '#F8FAFC',
-    fontSize: 14,
-    maxHeight: 100,
+    fontSize: 13,
+    maxHeight: 90,
   },
   sendButton: {
     backgroundColor: '#2563EB',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
 });
