@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from .database import engine, SessionLocal, Base
 from .models import Tenant, Account, Membership, SOP, SOPVersion
 from .auth import hash_password
@@ -73,7 +73,7 @@ def seed_database():
                 {"id": "C4", "label": "Xác nhận sự đồng thuận và cảm ơn khách", "weight": 15, "critical": False}
             ],
             approved_by=manager_a.id,
-            approved_at=datetime.utcnow()
+            approved_at=datetime.now(timezone.utc)
         )
         db.add(sop_a_v1)
 
@@ -131,7 +131,7 @@ def seed_database():
                 {"id": "C4", "label": "Lời chúc và tri ân khách hàng", "weight": 15, "critical": False}
             ],
             approved_by=manager_b.id,
-            approved_at=datetime.utcnow()
+            approved_at=datetime.now(timezone.utc)
         )
         db.add(sop_b_v1)
         
