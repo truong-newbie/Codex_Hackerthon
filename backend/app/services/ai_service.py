@@ -143,6 +143,8 @@ class AIService:
                 prompt = f"""
                 BỐI CẢNH TÌNH HUỐNG: {situation}
                 CÂU MỞ ĐẦU CỦA KHÁCH: {opening_message}
+                CÁC BƯỚC SOP CỦA CỬA HÀNG (ĐỂ KHÁCH HÀNG THỬ THÁCH NHÂN VIÊN):
+                {json.dumps([s.model_dump() for s in steps], ensure_ascii=False, indent=2)}
                 
                 LỊCH SỬ ĐỐI THOẠI TRƯỚC ĐÓ:
                 {json.dumps(history, ensure_ascii=False, indent=2)}
@@ -153,8 +155,8 @@ class AIService:
                 
                 HÃY PHẢN HỒI LẠI TRONG VAI KHÁCH HÀNG:
                 - Giữ phản hồi ngắn gọn (1-2 câu tiếng Việt tự nhiên), bộc lộ cảm xúc tương ứng với thái độ của nhân viên.
+                - Nếu nhân viên mới chỉ xin lỗi mà chưa đưa ra giải pháp cụ thể theo bước cuối của SOP, hãy hỏi xoáy xem quán giải quyết đền bù/đổi món thế nào.
                 - Nếu nhân viên nhã nhặn, lắng nghe và đưa ra giải pháp hợp lý theo quy định quán, hãy dịu giọng và đồng thuận.
-                - Nếu nhân viên trả lời cộc lốc hoặc sai quy định, hãy tiếp tục bày tỏ sự chưa hài lòng.
                 """
                 response = client.models.generate_content(
                     model=settings.GEMINI_MODEL,
@@ -176,12 +178,19 @@ class AIService:
                     detail=f"Lỗi từ Google GenAI API: {str(e)}"
                 )
 
-        # STUB MODE: Phản hồi thông minh dựa trên từ khóa của nhân viên
+        # STUB MODE: Phản hồi thông minh dựa trên từ khóa của nhân viên và bước SOP đang ghim
         emp_lower = employee_text.lower()
+        steps_text_lower = " ".join([s.instruction.lower() for s in steps])
+        requires_cookie = "bánh quy" in steps_text_lower
+
         if "xin lỗi" in emp_lower or "thông cảm" in emp_lower:
-            if any(w in emp_lower for w in ["đổi", "pha lại", "làm lại", "quản lý", "voucher"]):
+            if requires_cookie and "bánh" not in emp_lower:
                 return CustomerOutput(
-                    customer_message="Ừ, thấy em xin lỗi đàng hoàng và giải quyết hợp lý thế thì anh đồng ý. Làm nhanh giúp anh nhé!"
+                    customer_message="Ừ, anh ghi nhận lời xin lỗi. Nhưng anh thấy quán mới có chính sách tặng kèm bánh quy bơ miễn phí khi pha lỗi đồ uống cơ mà, em có áp dụng cho anh không?"
+                )
+            if any(w in emp_lower for w in ["đổi", "pha lại", "làm lại", "quản lý", "voucher", "bánh"]):
+                return CustomerOutput(
+                    customer_message="Ừ, thấy em xin lỗi đàng hoàng và giải quyết hợp lý đúng quy định thế thì anh đồng ý. Làm nhanh giúp anh nhé!"
                 )
             return CustomerOutput(
                 customer_message="Ừ, biết xin lỗi là được rồi. Nhưng giờ cốc này bỏ đi à? Em tính giải quyết thế nào cho anh?"
