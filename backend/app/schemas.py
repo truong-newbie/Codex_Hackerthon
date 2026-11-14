@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 
@@ -27,14 +27,28 @@ class TokenResponse(BaseModel):
 
 # --- SOP & Rubric Schemas ---
 class StepItem(BaseModel):
-    id: str
-    instruction: str
+    id: str = Field(..., min_length=1)
+    instruction: str = Field(..., min_length=1)
+
+    @field_validator("id", "instruction")
+    @classmethod
+    def must_not_be_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Trường này không được để trống")
+        return v.strip()
 
 class RubricItem(BaseModel):
-    id: str
-    label: str
-    weight: int = Field(..., ge=0, le=100)
+    id: str = Field(..., min_length=1)
+    label: str = Field(..., min_length=1)
+    weight: int = Field(..., ge=1, le=100)
     critical: bool = False
+
+    @field_validator("id", "label")
+    @classmethod
+    def must_not_be_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Trường này không được để trống")
+        return v.strip()
 
 class SOPVersionDetail(BaseModel):
     id: str
@@ -55,8 +69,8 @@ class SOPDetailResponse(BaseModel):
     versions: List[SOPVersionDetail] = []
 
 class CreateDraftRequest(BaseModel):
-    steps: List[StepItem]
-    rubric: List[RubricItem]
+    steps: List[StepItem] = Field(..., min_length=1)
+    rubric: List[RubricItem] = Field(..., min_length=1)
 
 class ApproveResponse(BaseModel):
     message: str
@@ -78,15 +92,25 @@ class TrainingStartRequest(BaseModel):
 class TrainingSessionResponse(BaseModel):
     session_id: str
     tenant_id: str
+    sop_id: Optional[str] = None
     sop_version_id: str
+    sop_version_no: int = 1
     sop_title: str
     module: ModuleDraft
     completed: bool
     turns_count: int
     ai_mode: str
+    latency_ms: Optional[int] = None
 
 class TrainingTurnRequest(BaseModel):
     message: str = Field(..., min_length=2, max_length=1000)
+
+    @field_validator("message")
+    @classmethod
+    def message_not_blank(cls, v: str) -> str:
+        if not v or len(v.strip()) < 2:
+            raise ValueError("Tin nhắn phản hồi phải có ít nhất 2 ký tự")
+        return v.strip()
 
 class CustomerOutput(BaseModel):
     customer_message: str
@@ -105,6 +129,7 @@ class TrainingTurnResponse(BaseModel):
     remaining_turns: int
     completed: bool
     ai_mode: str
+    latency_ms: Optional[int] = None
 
 class JudgmentDraft(BaseModel):
     criterion_id: str
@@ -129,10 +154,40 @@ class EvaluationEvidence(BaseModel):
 class FinalResultResponse(BaseModel):
     session_id: str
     sop_version_id: str
+    sop_version_no: Optional[int] = None
     score: int
     passed: bool
     critical_failure: bool
     evidence: List[EvaluationEvidence]
     coaching_tip: str
     ai_mode: str
+    latency_ms: Optional[int] = None
     disclaimer: str = "Kết quả mô phỏng dùng cho mục đích đào tạo và rèn luyện kỹ năng, không thay thế cho quyết định đánh giá nhân sự chính thức."
+
+class SessionSummaryItem(BaseModel):
+    session_id: str
+    sop_id: str
+    sop_title: str
+    sop_version_id: str
+    sop_version_no: int
+    completed: bool
+    turns_count: int
+    score: Optional[int] = None
+    passed: Optional[bool] = None
+    critical_failure: Optional[bool] = None
+    ai_mode: str
+    created_at: datetime
+
+class TrainingSessionDetailResponse(BaseModel):
+    session_id: str
+    tenant_id: str
+    sop_id: str
+    sop_title: str
+    sop_version_id: str
+    sop_version_no: int
+    module: ModuleDraft
+    completed: bool
+    turns: List[TurnDetail]
+    result: Optional[FinalResultResponse] = None
+    ai_mode: str
+    created_at: datetime
