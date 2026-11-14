@@ -1,3 +1,4 @@
+import time
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -6,8 +7,9 @@ from ..models import SOP, SOPVersion, TrainingSession, Turn, TrainingResult
 from ..schemas import (
     TrainingStartRequest, TrainingSessionResponse, 
     TrainingTurnRequest, TrainingTurnResponse, 
-    FinalResultResponse, EvaluationEvidence, ModuleDraft,
-    StepItem, RubricItem, UserInfo
+    FinalResultResponse, ModuleDraft, TurnDetail,
+    StepItem, RubricItem, UserInfo,
+    SessionSummaryItem, TrainingSessionDetailResponse
 )
 from ..auth import get_current_user_context
 from ..config import settings
@@ -15,6 +17,91 @@ from ..services.ai_service import ai_service
 from ..services.scoring_engine import compute_deterministic_result
 
 router = APIRouter(prefix="/v1/training", tags=["Training & Simulation"])
+
+@router.get("/sessions", response_model=List[SessionSummaryItem])
+def list_user_sessions(
+    current_user: UserInfo = Depends(get_current_user_context),
+    db: Session = Depends(get_db)
+):
+    sessions = (
+        db.query(TrainingSession)
+        .filter(
+            TrainingSession.tenant_id == current_user.tenant_id,
+            TrainingSession.user_id == current_user.id
+        )
+        .order_by(TrainingSession.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    summaries = []
+    for s in sessions:
+        sop_ver = db.query(SOPVersion).filter(SOPVersion.id == s.sop_version_id).first()
+        sop = db.query(SOP).filter(SOP.id == sop_ver.sop_id).first() if sop_ver else None
+        summaries.append(
+            SessionSummaryItem(
+                session_id=s.id,
+                sop_id=sop.id if sop else "",
+                sop_title=sop.title if sop else "SOP",
+                sop_version_id=s.sop_version_id,
+                sop_version_no=sop_ver.version_no if sop_ver else 1,
+                completed=s.completed,
+                turns_count=len(s.turns),
+                score=s.result.score if s.result else None,
+                passed=s.result.passed if s.result else None,
+                critical_failure=s.result.critical_failure if s.result else None,
+                ai_mode=settings.AI_MODE,
+                created_at=s.created_at
+            )
+        )
+    return summaries
+
+@router.get("/{session_id}", response_model=TrainingSessionDetailResponse)
+def get_training_session_detail(
+    session_id: str,
+    current_user: UserInfo = Depends(get_current_user_context),
+    db: Session = Depends(get_db)
+):
+    session = db.query(TrainingSession).filter(
+        TrainingSession.id == session_id,
+        TrainingSession.tenant_id == current_user.tenant_id,
+        TrainingSession.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Phiên học không tồn tại hoặc không thuộc quyền truy cập của bạn"
+        )
+        
+    sop_ver = db.query(SOPVersion).filter(SOPVersion.id == session.sop_version_id).first()
+    sop = db.query(SOP).filter(SOP.id == sop_ver.sop_id).first() if sop_ver else None
+    
+    turns_list = [
+        TurnDetail(
+            turn_no=t.turn_no,
+            employee_text=t.employee_text,
+            customer_text=t.customer_text,
+            created_at=t.created_at
+        )
+        for t in session.turns
+    ]
+    
+    result_obj = FinalResultResponse(**session.result.payload_json) if session.result else None
+    
+    return TrainingSessionDetailResponse(
+        session_id=session.id,
+        tenant_id=session.tenant_id,
+        sop_id=sop.id if sop else "",
+        sop_title=sop.title if sop else "SOP",
+        sop_version_id=session.sop_version_id,
+        sop_version_no=sop_ver.version_no if sop_ver else 1,
+        module=ModuleDraft(**session.module_json),
+        completed=session.completed,
+        turns=turns_list,
+        result=result_obj,
+        ai_mode=settings.AI_MODE,
+        created_at=session.created_at
+    )
 
 @router.post("/start", response_model=TrainingSessionResponse)
 def start_training_session(
@@ -49,16 +136,18 @@ def start_training_session(
     steps = [StepItem(**s) for s in active_version.steps_json]
     rubric = [RubricItem(**r) for r in active_version.rubric_json]
     
-    # AI Compiler generates ModuleDraft
+    # AI Compiler generates ModuleDraft (measure latency)
+    t0 = time.perf_counter()
     module_draft = ai_service.compile_module(sop.title, steps, rubric)
+    latency_ms = int((time.perf_counter() - t0) * 1000)
     
     # Enforce schema integrity: Reject any criteria IDs that do not exist in the approved rubric
     valid_rubric_ids = {r.id for r in rubric}
     module_draft.criteria = [cid for cid in module_draft.criteria if cid in valid_rubric_ids]
     if not module_draft.criteria:
-        module_draft.criteria = list(valid_rubric_ids)
+        module_draft.criteria = [r.id for r in rubric]
         
-    # Create session with pinned SOP version
+    # Create session with pinned SOP version (BR-05)
     session = TrainingSession(
         tenant_id=current_user.tenant_id,
         user_id=current_user.id,
@@ -73,12 +162,15 @@ def start_training_session(
     return TrainingSessionResponse(
         session_id=session.id,
         tenant_id=session.tenant_id,
+        sop_id=sop.id,
         sop_version_id=session.sop_version_id,
+        sop_version_no=active_version.version_no,
         sop_title=sop.title,
         module=module_draft,
         completed=False,
         turns_count=0,
-        ai_mode=settings.AI_MODE
+        ai_mode=settings.AI_MODE,
+        latency_ms=latency_ms
     )
 
 @router.post("/{session_id}/turn", response_model=TrainingTurnResponse)
@@ -116,6 +208,7 @@ def submit_training_turn(
         for t in session.turns
     ]
     
+    t0 = time.perf_counter()
     customer_reply = ai_service.simulate_customer(
         situation=module_data.situation,
         opening_message=module_data.opening_message,
@@ -123,6 +216,7 @@ def submit_training_turn(
         history=history,
         employee_text=payload.message
     )
+    latency_ms = int((time.perf_counter() - t0) * 1000)
     
     turn = Turn(
         session_id=session.id,
@@ -144,7 +238,8 @@ def submit_training_turn(
         customer_text=turn.customer_text,
         remaining_turns=max(0, 4 - new_turns_count),
         completed=is_last_turn,
-        ai_mode=settings.AI_MODE
+        ai_mode=settings.AI_MODE,
+        latency_ms=latency_ms
     )
 
 @router.post("/{session_id}/evaluate", response_model=FinalResultResponse)
@@ -162,7 +257,7 @@ def evaluate_training_session(
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Phiên học không tồn tại")
         
-    # Idempotent response: If already evaluated, return the saved result
+    # Idempotent response (BR-12 / NFR-08 / AT-10): If already evaluated, return the saved result
     if session.result:
         return FinalResultResponse(**session.result.payload_json)
         
@@ -172,7 +267,7 @@ def evaluate_training_session(
             detail="Cần hoàn thành ít nhất 1 lượt đối thoại trước khi yêu cầu đánh giá"
         )
         
-    # Retrieve the SOP version that was PINNED when the session was created
+    # Retrieve the SOP version that was PINNED when the session was created (BR-05 / AT-06)
     sop_version = db.query(SOPVersion).filter(SOPVersion.id == session.sop_version_id).first()
     steps = [StepItem(**s) for s in sop_version.steps_json]
     rubric = [RubricItem(**r) for r in sop_version.rubric_json]
@@ -184,7 +279,9 @@ def evaluate_training_session(
     employee_texts = [t.employee_text for t in session.turns]
     
     # 1. AI extracts exact quotes and provides draft judgments
+    t0 = time.perf_counter()
     eval_draft = ai_service.evaluate_session(steps, rubric, transcript)
+    latency_ms = int((time.perf_counter() - t0) * 1000)
     
     # 2. Server deterministic scoring engine verifies quotes and calculates final score
     score, passed, critical_failure, evidence_list = compute_deterministic_result(
@@ -196,12 +293,14 @@ def evaluate_training_session(
     final_payload = FinalResultResponse(
         session_id=session.id,
         sop_version_id=session.sop_version_id,
+        sop_version_no=sop_version.version_no,
         score=score,
         passed=passed,
         critical_failure=critical_failure,
         evidence=evidence_list,
         coaching_tip=eval_draft.coaching_tip,
-        ai_mode=settings.AI_MODE
+        ai_mode=settings.AI_MODE,
+        latency_ms=latency_ms
     )
     
     # Save training result and mark session complete
