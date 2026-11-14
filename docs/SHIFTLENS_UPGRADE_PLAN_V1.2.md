@@ -2,7 +2,7 @@
 
 Ngày lập: 14/11/2026. Baseline: mã nguồn v1.1.0 đang có trong repository.
 
-**Trạng thái tài liệu: kế hoạch chưa triển khai.** Mọi ô nghiệm thu dưới đây để trống có chủ đích. Không hiểu việc tài liệu tồn tại là tính năng đã được sửa hoặc kiểm thử đã đạt.
+**Trạng thái tài liệu: đang triển khai.** Xem `docs/upgrade-v1.2/PROGRESS.md` để biết code đã sửa và giới hạn kiểm chứng. Các release gate vẫn để TODO tới khi có đủ bằng chứng.
 
 Mục tiêu: đưa ShiftLens từ MVP demo thành phiên bản có chức năng đúng, phục hồi được khi lỗi, quản trị được nhiều SOP/nhân viên và có bằng chứng nghiệm thu trên Android thật. Không hứa “hoàn hảo tuyệt đối”; chỉ công bố đạt những điều kiện đã kiểm chứng.
 
@@ -354,29 +354,29 @@ Priority: P0 = dữ liệu/tính đúng hoặc chặn nghiệm thu; P1 = cần c
 
 | ID | Hạng mục | Priority | Phụ thuộc | Quy mô | Trạng thái |
 |---|---|---|---|---|---|
-| U00 | Baseline, công cụ, bảo vệ thay đổi có sẵn | P0 | — | Nhỏ | TODO |
-| U01 | Test isolation và preflight an toàn | P0 | U00 | Vừa | TODO |
-| U02 | Sửa XSS Manager Studio | P0 | U01 | Vừa | TODO |
-| U03 | Config validation và lỗi có cấu trúc | P0 | U01 | Vừa | TODO |
-| U04 | Migration và ràng buộc DB | P0 | U01,U03 | Lớn | TODO |
-| U05 | API contract/mobile types/versioning | P0 | U03,U04 | Vừa | TODO |
+| U00 | Baseline, công cụ, bảo vệ thay đổi có sẵn | P0 | — | Nhỏ | DONE |
+| U01 | Test isolation và preflight an toàn | P0 | U00 | Vừa | IN_PROGRESS |
+| U02 | Sửa XSS Manager Studio | P0 | U01 | Vừa | IN_PROGRESS |
+| U03 | Config validation và lỗi có cấu trúc | P0 | U01 | Vừa | IN_PROGRESS |
+| U04 | Migration và ràng buộc DB | P0 | U01,U03 | Lớn | IN_PROGRESS |
+| U05 | API contract/mobile types/versioning | P0 | U03,U04 | Vừa | IN_PROGRESS |
 | U06 | State, idempotency và concurrency | P0 | U04,U05 | Lớn | TODO |
-| U07 | Evidence, scoring và fixture policy | P0 | U04,U05,U06 | Lớn | TODO |
-| U08 | AI gateway, timeout, provenance/readiness | P0 | U03,U06,U07 | Lớn | TODO |
-| U09 | Auth, authorization và rate limits | P0 | U03,U04,U05 | Lớn | TODO |
-| U10 | Mobile auth/storage/recovery nền tảng | P0 | U05,U08,U09 | Vừa | TODO |
-| U11 | Mobile hội thoại và retry an toàn | P0 | U06,U07,U10 | Lớn | TODO |
+| U07 | Evidence, scoring và fixture policy | P0 | U04,U05,U06 | Lớn | IN_PROGRESS |
+| U08 | AI gateway, timeout, provenance/readiness | P0 | U03,U06,U07 | Lớn | IN_PROGRESS |
+| U09 | Auth, authorization và rate limits | P0 | U03,U04,U05 | Lớn | IN_PROGRESS |
+| U10 | Mobile auth/storage/recovery nền tảng | P0 | U05,U08,U09 | Vừa | IN_PROGRESS |
+| U11 | Mobile hội thoại và retry an toàn | P0 | U06,U07,U10 | Lớn | IN_PROGRESS |
 | U12 | TTS, validation, accessibility và UI lỗi | P1 | U10,U11 | Vừa | TODO |
-| U13 | SOP lifecycle đầy đủ | P1 | U04,U05,U07,U09 | Lớn | TODO |
-| U14 | Manager Studio usable, nhiều SOP | P1 | U02,U13 | Lớn | TODO |
-| U15 | Analytics, history và manager evidence | P1 | U05,U07,U09,U13 | Vừa | TODO |
+| U13 | SOP lifecycle đầy đủ | P1 | U04,U05,U07,U09 | Lớn | IN_PROGRESS |
+| U14 | Manager Studio usable, nhiều SOP | P1 | U02,U13 | Lớn | IN_PROGRESS |
+| U15 | Analytics, history và manager evidence | P1 | U05,U07,U09,U13 | Vừa | IN_PROGRESS |
 | U16 | Quản lý nhân viên trong tenant | P1 | U04,U09,U14 | Lớn | TODO |
-| U17 | Docker, CI, secrets, backup và staging | P0 trước public | U03,U04,U09 | Lớn | TODO |
+| U17 | Docker, CI, secrets, backup và staging | P0 trước public | U03,U04,U09 | Lớn | IN_PROGRESS |
 | U18 | Android release/EAS và môi trường mạng | P0 trước release | U10,U11,U12,U17 | Lớn | TODO |
 | U19 | Regression/integration/security matrix | P0 | U01–U18 | Lớn | TODO |
-| U20 | Observability và benchmark thực tế | P1 | U08,U15,U17,U19 | Vừa | TODO |
+| U20 | Observability và benchmark thực tế | P1 | U08,U15,U17,U19 | Vừa | IN_PROGRESS |
 | U21 | E2E Android + Gemini + pilot review | P0 | U18,U19,U20 | Lớn | TODO |
-| U22 | Tài liệu, release evidence và bàn giao | P0 | U00–U21 | Vừa | TODO |
+| U22 | Tài liệu, release evidence và bàn giao | P0 | U00–U21 | Vừa | IN_PROGRESS |
 
 U19 là đợt tổng hợp kiểm thử; không đợi tới U19 mới viết regression test cho lỗi đang sửa. Những task không phụ thuộc nhau có thể đổi thứ tự nếu nhật ký giải thích rõ.
 

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Account, Membership, Tenant
 from ..schemas import LoginRequest, TokenResponse, UserInfo
-from ..auth import verify_password, create_access_token, get_current_user_context
+from ..auth import verify_password, hash_password, create_access_token, get_current_user_context
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 
@@ -19,7 +19,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Tài khoản hoặc mật khẩu không chính xác"
         )
-        
+
     membership = db.query(Membership).filter(Membership.user_id == account.id).first()
     if not membership:
         raise HTTPException(
@@ -28,6 +28,10 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         )
         
     tenant = db.query(Tenant).filter(Tenant.id == membership.tenant_id).first()
+
+    if not account.password_hash.startswith("pbkdf2_sha256$"):
+        account.password_hash = hash_password(payload.password)
+        db.commit()
     
     token_data = {
         "sub": account.id,

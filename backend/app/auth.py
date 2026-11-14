@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import os
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -13,18 +14,37 @@ from .schemas import UserInfo
 security = HTTPBearer()
 
 def hash_password(password: str) -> str:
-    # Use PBKDF2 HMAC SHA256 for deterministic cross-platform compatibility
-    salt = "shiftlens_salt_2026"
+    salt = os.urandom(16)
+    iterations = 310000
     key = hashlib.pbkdf2_hmac(
         'sha256',
         password.encode('utf-8'),
-        salt.encode('utf-8'),
-        100000
+        salt,
+        iterations
     )
-    return key.hex()
+    return f"pbkdf2_sha256${iterations}${salt.hex()}${key.hex()}"
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return hash_password(plain_password) == hashed_password
+    if hashed_password.startswith("pbkdf2_sha256$"):
+        try:
+            _, rounds, salt_hex, expected_hex = hashed_password.split("$", 3)
+            iterations = int(rounds)
+            if not 100000 <= iterations <= 1000000:
+                return False
+            actual = hashlib.pbkdf2_hmac(
+                "sha256", plain_password.encode("utf-8"), bytes.fromhex(salt_hex), iterations
+            )
+            return hmac.compare_digest(actual, bytes.fromhex(expected_hex))
+        except (ValueError, TypeError):
+            return False
+
+    # Legacy demo database hashes are accepted once and upgraded at login.
+    if len(hashed_password) != 64:
+        return False
+    legacy = hashlib.pbkdf2_hmac(
+        "sha256", plain_password.encode("utf-8"), b"shiftlens_salt_2026", 100000
+    )
+    return hmac.compare_digest(legacy.hex(), hashed_password)
 
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     to_encode = data.copy()

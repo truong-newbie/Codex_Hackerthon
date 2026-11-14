@@ -46,6 +46,12 @@ export interface SOPDetailResponse {
   versions: SOPVersionDetail[];
 }
 
+export interface ApproveResponse {
+  message: string;
+  active_version_id: string;
+  version_no: number;
+}
+
 export interface ModuleDraft {
   title: string;
   learning_objective: string;
@@ -146,6 +152,8 @@ export interface HealthResponse {
   status: string;
   ai_mode: string;
   live_ready: boolean;
+  live_configured?: boolean;
+  ai_status?: 'stub' | 'unverified' | 'unavailable';
   gemini_model?: string;
   version: string;
 }

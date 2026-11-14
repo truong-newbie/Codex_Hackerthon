@@ -44,13 +44,13 @@ def verify_quote_in_transcript(quote: str, employee_transcript: List[str]) -> bo
     if len(normalized_quote) < 3:
         return False
         
-    # Chỉ chấp nhận các lượt thoại không chứa mã độc Prompt Injection
+    # A quote must occur in one actual employee turn. Joining turns could
+    # accept a sentence assembled from the end of one turn and the next.
     clean_turns = [
         normalize_text(t) for t in employee_transcript 
         if t and not contains_prompt_injection(t)
     ]
-    combined_employee_text = " ".join(clean_turns)
-    return normalized_quote in combined_employee_text
+    return any(normalized_quote in turn for turn in clean_turns)
 
 def compute_deterministic_result(
     rubric: List[RubricItem],

@@ -33,7 +33,10 @@ class SOPService:
                 versions_list.append(v_detail)
                 if sop.active_version_id == v.id and v.status == "approved":
                     active_version_detail = v_detail
-                    
+
+            if role != "manager" and active_version_detail is None:
+                continue
+
             results.append(
                 SOPDetailResponse(
                     id=sop.id,
@@ -44,6 +47,47 @@ class SOPService:
                 )
             )
         return results
+
+    @staticmethod
+    def _validate_steps_rubric(steps: List[StepItem], rubric: List[RubricItem]) -> None:
+        step_ids = [s.id for s in steps]
+        if len(step_ids) != len(set(step_ids)):
+            raise HTTPException(status_code=422, detail="Danh sách các bước (steps) chứa ID bị trùng lặp")
+        criterion_ids = [r.id for r in rubric]
+        if len(criterion_ids) != len(set(criterion_ids)):
+            raise HTTPException(status_code=422, detail="Danh sách tiêu chí đánh giá (rubric) chứa ID bị trùng lặp")
+        total_weight = sum(r.weight for r in rubric)
+        if total_weight != 100:
+            raise HTTPException(status_code=422, detail=f"Tổng trọng số Rubric phải bằng 100 (Hiện tại: {total_weight})")
+
+    @staticmethod
+    def create_sop(
+        db: Session, tenant_id: str, title: str,
+        steps: List[StepItem], rubric: List[RubricItem]
+    ) -> SOPDetailResponse:
+        SOPService._validate_steps_rubric(steps, rubric)
+        existing = db.query(SOP).filter(SOP.tenant_id == tenant_id, SOP.title == title).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Tên SOP đã tồn tại trong cửa hàng")
+        sop = SOP(tenant_id=tenant_id, title=title)
+        db.add(sop)
+        db.flush()
+        version = SOPVersion(
+            sop_id=sop.id, version_no=1, status="draft",
+            steps_json=[s.model_dump() for s in steps],
+            rubric_json=[r.model_dump() for r in rubric],
+        )
+        db.add(version)
+        db.commit()
+        db.refresh(sop)
+        db.refresh(version)
+        return SOPDetailResponse(
+            id=sop.id, tenant_id=tenant_id, title=sop.title, active_version=None,
+            versions=[SOPVersionDetail(
+                id=version.id, sop_id=sop.id, version_no=1, status="draft",
+                steps=steps, rubric=rubric, created_at=version.created_at,
+            )],
+        )
 
     @staticmethod
     def create_draft_version(
@@ -57,28 +101,7 @@ class SOPService:
         if not sop:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy SOP")
             
-        # FR-04: Validate unique step IDs and non-empty instructions
-        step_ids = [s.id for s in steps]
-        if len(step_ids) != len(set(step_ids)):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Danh sách các bước (steps) chứa ID bị trùng lặp"
-            )
-            
-        crit_ids = [r.id for r in rubric]
-        if len(crit_ids) != len(set(crit_ids)):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Danh sách tiêu chí đánh giá (rubric) chứa ID bị trùng lặp"
-            )
-            
-        # BR-07: Validate rubric weights total = 100
-        total_weight = sum(r.weight for r in rubric)
-        if total_weight != 100:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Tổng trọng số các tiêu chí trong Rubric phải bằng 100 (Hiện tại: {total_weight})"
-            )
+        SOPService._validate_steps_rubric(steps, rubric)
             
         # Determine next version number
         highest_version = db.query(SOPVersion).filter(SOPVersion.sop_id == sop_id).order_by(SOPVersion.version_no.desc()).first()

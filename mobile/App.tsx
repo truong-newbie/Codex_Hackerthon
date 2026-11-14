@@ -6,7 +6,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { SopListScreen } from './src/screens/SopListScreen';
 import { SimulationScreen } from './src/screens/SimulationScreen';
 import { ResultScreen } from './src/screens/ResultScreen';
-import { api } from './src/api/client';
+import { api, ApiError } from './src/api/client';
 import { TrainingSessionResponse, FinalResultResponse, TurnDetail } from './src/api/types';
 
 const MainNavigator: React.FC = () => {
@@ -39,8 +39,12 @@ const MainNavigator: React.FC = () => {
           ai_mode: detail.ai_mode,
         });
       }
-    } catch (_) {
-      await setActiveSessionId(null);
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+        await setActiveSessionId(null);
+      } else {
+        Alert.alert('Chưa thể khôi phục phiên', 'Không tải được phiên học lúc này. Phiên vẫn được lưu; hãy kiểm tra kết nối rồi mở lại từ lịch sử.');
+      }
     } finally {
       setBusy(false);
     }

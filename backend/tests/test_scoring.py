@@ -16,6 +16,10 @@ def test_verify_quote_in_transcript():
     # Fabricated quote not in transcript
     assert verify_quote_in_transcript("Em xin phép hoàn tiền 100% cho anh", transcript) is False
 
+def test_quote_cannot_cross_employee_turn_boundary():
+    transcript = ["Em xin lỗi anh", "xin phép báo quản lý"]
+    assert verify_quote_in_transcript("anh xin phép", transcript) is False
+
 def test_hallucinated_quote_scoring_zero():
     rubric = [
         RubricItem(id="C1", label="Xin lỗi", weight=30, critical=False),

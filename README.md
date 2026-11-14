@@ -95,24 +95,26 @@ cd backend
 # Cài đặt thư viện:
 pip install -r requirements.txt
 
-# Khởi tạo dữ liệu mẫu (Café A & B):
+# Cấu hình demo: copy .env.example thành .env, kiểm tra ENVIRONMENT=development và DEMO_MODE=true.
+# Lệnh seed chỉ dùng cho dữ liệu mẫu Café A & B; không dùng trên database vận hành.
 python -m app.seed
 
-# Chạy kiểm thử tự động (11/11 tests pass):
+# Test dùng SQLite tạm độc lập và AI_MODE=stub:
 python -m pytest -v
 
 # Khởi chạy máy chủ:
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 - Tài liệu API tương tác (Swagger UI): `http://localhost:8000/docs`
-- Kiểm tra trạng thái AI: `http://localhost:8000/v1/health`
+- Kiểm tra trạng thái AI: `http://localhost:8000/v1/health`. `live_ready=false` cho đến khi có probe Live thật; cấu hình key không chứng minh provider hoạt động.
+- SQLite mặc định ở `backend/shiftlens.db`, độc lập với thư mục chạy lệnh. Xem [nhật ký nâng cấp](docs/upgrade-v1.2/PROGRESS.md) trước khi dùng cho pilot.
 
 ### 4.2. Khởi chạy Ứng dụng Mobile Android (Expo & Android Studio)
 ```bash
 cd mobile
 
 # Cài đặt thư viện:
-npm install
+npm ci
 
 # Tuỳ chọn đặt URL Backend mặc định qua biến môi trường (xem mobile/.env.example):
 # EXPO_PUBLIC_API_URL=http://192.168.1.xxx:8000
@@ -125,9 +127,9 @@ npx expo start
 Thư mục native `mobile/android/` đã được sinh sẵn bằng `npx expo prebuild --platform android` và lưu trong repository (kèm cấu hình `android:usesCleartextTraffic="true"` để gọi LAN HTTP trên điện thoại thật):
 1. Mở **Android Studio** → **Open** → chọn thư mục `mobile/android`.
 2. Chờ **Gradle Sync** hoàn tất.
-3. Build APK từ Android Studio hoặc chạy lệnh Gradle từ `mobile/android`:
+3. Build APK từ Android Studio hoặc chạy lệnh Gradle từ `mobile/android` (chưa xác minh build và chạy trên thiết bị thật ở đợt nâng cấp v1.2):
    - Bản Debug: `./gradlew :app:assembleDebug` → File APK tại `mobile/android/app/build/outputs/apk/debug/app-debug.apk`
-   - Bản Release độc lập (nhúng sẵn JS bundle, không cần Metro): `./gradlew :app:assembleRelease` → File APK tại `mobile/android/app/build/outputs/apk/release/app-release.apk`
+   - Bản Release: `./gradlew :app:assembleRelease` → File APK dự kiến tại `mobile/android/app/build/outputs/apk/release/app-release.apk`; cần kiểm tra signing và chạy khi Metro tắt trước khi phát hành.
 4. Lưu ý kết nối mạng trên điện thoại thật: Dùng địa chỉ IP LAN của máy chạy FastAPI (ví dụ `http://192.168.1.xxx:8000`) hoặc HTTPS tunnel. Có thể sửa trực tiếp tại ô **Server URL** ngay trên màn hình Đăng nhập (tự động lưu qua `AsyncStorage` kể cả sau khi Force-Stop).
 
 #### Cách 2: Build APK qua đám mây (EAS Build)
@@ -151,9 +153,6 @@ Mật khẩu chung cho tất cả tài khoản mẫu: **`ShiftLens@2026`**
 
 ---
 
-## 6. Kịch bản Nghiệm thu Demo (Hackathon Checklist)
-- [x] **Backend 100% Pass Tests**: Đã kiểm thử tự động toàn bộ logic Auth, SOP Versioning, Tenant Isolation, Scoring Engine.
-- [x] **Chế độ chạy kép**: Chạy offline mượt mà với `AI_MODE=stub`, chuyển đổi tức thì sang Live Gemini API (`AI_MODE=live`) khi có `GEMINI_API_KEY`.
-- [x] **Mobile Android Sẵn sàng**: UI thiết kế chuẩn mobile, hỗ trợ âm thanh giọng nói TTS tiếng Việt (`expo-speech`), cấu hình sẵn EAS build APK.
-- [x] **Đối soát dẫn chứng**: Không cho phép AI bịa đặt quote (quote không có trong lời nhân viên sẽ bị chấm 0 điểm).
-- [x] **Bộ Skills cho AI**: Đầy đủ tài liệu chuẩn trong `.agents/skills/` để bất kỳ lập trình viên hoặc AI Agent nào cũng nắm bắt dự án ngay lập tức.
+## 6. Trạng thái nâng cấp v1.2
+
+Kế hoạch chi tiết ở [SHIFTLENS_UPGRADE_PLAN_V1.2.md](docs/SHIFTLENS_UPGRADE_PLAN_V1.2.md); trạng thái thực hiện và bằng chứng kiểm tra ở [PROGRESS.md](docs/upgrade-v1.2/PROGRESS.md). Các gate backend runtime, Android, Gemini Live và triển khai production còn mở. Không dùng checklist hackathon cũ làm bằng chứng release.

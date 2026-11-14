@@ -2,7 +2,7 @@ import json
 import logging
 from typing import List, Dict
 from fastapi import HTTPException, status
-from ..config import settings
+from ..config import has_live_key, settings
 from ..schemas import (
     StepItem, RubricItem, ModuleDraft, CustomerOutput, 
     EvaluationDraft, JudgmentDraft
@@ -17,7 +17,7 @@ class AIService:
         self._cached_key = None
 
     def _get_client(self):
-        if not settings.GEMINI_API_KEY:
+        if not has_live_key():
             return None
         if self._client is None or self._cached_key != settings.GEMINI_API_KEY:
             try:
@@ -25,17 +25,18 @@ class AIService:
                 self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
                 self._cached_key = settings.GEMINI_API_KEY
             except Exception as e:
-                logger.warning(f"Không thể khởi tạo Google GenAI Client: {e}")
+                logger.warning("Không thể khởi tạo Google GenAI Client: %s", type(e).__name__)
                 return None
         return self._client
 
     def is_live_ready(self) -> bool:
-        return bool(settings.GEMINI_API_KEY and settings.AI_MODE.lower() == "live")
+        # SDK initialization/key presence cannot establish provider readiness.
+        return False
 
     def compile_module(self, sop_title: str, steps: List[StepItem], rubric: List[RubricItem]) -> ModuleDraft:
         """Module 1: Sinh bối cảnh tình huống và mục tiêu học tập từ SOP và Rubric."""
         if settings.AI_MODE.lower() == "live":
-            if not settings.GEMINI_API_KEY:
+            if not has_live_key():
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="Server đang cấu hình AI_MODE=live nhưng thiếu GEMINI_API_KEY (Fail-closed theo NFR-04)."
@@ -86,11 +87,11 @@ class AIService:
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"Lỗi AI Compiler Live: {e}")
+                logger.error("Lỗi AI Compiler Live: %s", type(e).__name__)
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Lỗi từ Google GenAI API: {str(e)}"
-                )
+                    detail="Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau."
+                ) from None
 
         # STUB MODE: Phản ánh chính xác nội dung SOP & chính sách từng quán/phiên bản (AT-04, AT-13)
         policy_step = steps[-1].instruction if steps else "Xử lý theo đúng quy định của cửa hàng."
@@ -122,7 +123,7 @@ class AIService:
             )
 
         if settings.AI_MODE.lower() == "live":
-            if not settings.GEMINI_API_KEY:
+            if not has_live_key():
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="Server đang cấu hình AI_MODE=live nhưng thiếu GEMINI_API_KEY (Fail-closed theo NFR-04)."
@@ -172,11 +173,11 @@ class AIService:
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"Lỗi AI Simulator Live: {e}")
+                logger.error("Lỗi AI Simulator Live: %s", type(e).__name__)
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Lỗi từ Google GenAI API: {str(e)}"
-                )
+                    detail="Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau."
+                ) from None
 
         # STUB MODE: Phản hồi thông minh dựa trên từ khóa của nhân viên và bước SOP đang ghim
         emp_lower = employee_text.lower()
@@ -216,7 +217,7 @@ class AIService:
     ) -> EvaluationDraft:
         """Module 3: Đánh giá bằng chứng phát ngôn theo Rubric."""
         if settings.AI_MODE.lower() == "live":
-            if not settings.GEMINI_API_KEY:
+            if not has_live_key():
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="Server đang cấu hình AI_MODE=live nhưng thiếu GEMINI_API_KEY (Fail-closed theo NFR-04)."
@@ -269,11 +270,11 @@ class AIService:
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"Lỗi AI Evaluator Live: {e}")
+                logger.error("Lỗi AI Evaluator Live: %s", type(e).__name__)
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Lỗi từ Google GenAI API: {str(e)}"
-                )
+                    detail="Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau."
+                ) from None
 
         # STUB MODE: Phân tích transcript nhân viên và trích xuất quote thật (loại bỏ lượt có prompt injection)
         clean_employee_turns = [
@@ -313,6 +314,29 @@ class AIService:
             elif "policy" in label_lower or "chính sách" in label_lower or "linh hoạt" in label_lower or cid == "C3":
                 # Kiểm tra xem SOP là nghiêm ngặt (không tự ý hoàn tiền) hay linh hoạt
                 is_strict_no_refund = "không tự ý hoàn tiền" in label_lower
+                # An explicit later breach must override an earlier compliant
+                # answer. The old first-match loop could miss a critical fail.
+                if is_strict_no_refund:
+                    violating_turn = next(
+                        (
+                            turn for turn in clean_employee_turns
+                            if "hoàn tiền" in turn.lower()
+                            and ("tự" in turn.lower() or "rút két" in turn.lower()
+                                 or "không cần hỏi" in turn.lower())
+                            and "không tự" not in turn.lower()
+                            and "xin phép" not in turn.lower()
+                            and "báo quản lý" not in turn.lower()
+                        ),
+                        None,
+                    )
+                    if violating_turn:
+                        judgments.append(JudgmentDraft(
+                            criterion_id=cid,
+                            passed=False,
+                            exact_quote=violating_turn,
+                            explanation="Vi phạm chính sách nghiêm trọng: Tự ý hứa hoàn tiền khi chưa xin ý kiến quản lý."
+                        ))
+                        continue
                 for turn in clean_employee_turns:
                     t_low = turn.lower()
                     if is_strict_no_refund:

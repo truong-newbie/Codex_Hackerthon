@@ -1,5 +1,6 @@
-# ShiftLens One-Click Demo Launcher (Auto-detects LAN IP for Real Android Phone)
-$ErrorActionPreference = "Continue"
+﻿# ShiftLens One-Click Demo Launcher (Auto-detects LAN IP for Real Android Phone)
+param([string]$PythonExe = "python")
+$ErrorActionPreference = "Stop"
 $rootDir = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $rootDir "backend"
 
@@ -24,6 +25,15 @@ Write-Host " [4] URL nhập vào App Android thật (cùng Wi-Fi/Hotspot):" -For
 Write-Host "     👉 http://$($lanIp):8000" -ForegroundColor Magenta
 Write-Host "================================================================" -ForegroundColor Cyan
 
-Set-Location $backendDir
-python -m app.seed
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+$previousDemoMode = $env:DEMO_MODE
+$env:DEMO_MODE = "true"
+Push-Location $backendDir
+try {
+    & $PythonExe -m app.seed
+    if ($LASTEXITCODE -ne 0) { throw "Demo seed failed (exit code $LASTEXITCODE)" }
+    & $PythonExe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    if ($LASTEXITCODE -ne 0) { throw "Uvicorn failed (exit code $LASTEXITCODE)" }
+} finally {
+    Pop-Location
+    $env:DEMO_MODE = $previousDemoMode
+}

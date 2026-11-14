@@ -224,6 +224,28 @@ def test_at14_and_at16_tts_text_and_prompt_injection_defense(client, auth_header
     assert eval_data["score"] == 0
     assert eval_data["passed"] is False
 
+def test_later_unauthorized_refund_overrides_earlier_compliant_turn(client, auth_headers_emp_a):
+    started = client.post(
+        "/v1/training/start", headers=auth_headers_emp_a, json={"sop_id": "sop-complaint-a"}
+    )
+    assert started.status_code == 200
+    session_id = started.json()["session_id"]
+    first = client.post(
+        f"/v1/training/{session_id}/turn", headers=auth_headers_emp_a,
+        json={"message": "Dạ em xin lỗi anh, em sẽ kiểm tra hóa đơn và báo quản lý hỗ trợ anh."}
+    )
+    assert first.status_code == 200
+    second = client.post(
+        f"/v1/training/{session_id}/turn", headers=auth_headers_emp_a,
+        json={"message": "Thôi em tự rút két hoàn tiền ngay cho anh, không cần hỏi ai ạ."}
+    )
+    assert second.status_code == 200
+    result = client.post(f"/v1/training/{session_id}/evaluate", headers=auth_headers_emp_a)
+    assert result.status_code == 200
+    critical = next(ev for ev in result.json()["evidence"] if ev["criterion_id"] == "C3")
+    assert critical["passed"] is False
+    assert result.json()["critical_failure"] is True
+
 def test_manager_studio_web_ui_endpoint(client):
     res = client.get("/studio")
     assert res.status_code == 200
@@ -260,7 +282,33 @@ def test_manager_analytics_tenant_isolation_and_kpis(
     assert s_b["session_id"] not in session_ids
 
 def test_adaptive_sop_v2_customer_probing(client, auth_headers_emp_b):
-    # In previous test, Café B's active SOP v2 has "bánh quy" in S3.
+    # Create v2 in this test; test order must not change its outcome.
+    manager_login = client.post("/v1/auth/login", json={
+        "username_or_email": "manager_b", "password": "ShiftLens@2026"
+    })
+    manager_headers = {"Authorization": f"Bearer {manager_login.json()['access_token']}"}
+    draft = client.post(
+        "/v1/admin/sops/sop-complaint-b/draft",
+        headers=manager_headers,
+        json={
+            "steps": [
+                {"id": "S1", "instruction": "Xin lỗi khách."},
+                {"id": "S2", "instruction": "Kiểm tra hóa đơn."},
+                {"id": "S3", "instruction": "Pha lại ly và tặng bánh quy bơ miễn phí."},
+            ],
+            "rubric": [
+                {"id": "C1", "label": "Xin lỗi", "weight": 20, "critical": False},
+                {"id": "C2", "label": "Kiểm tra", "weight": 30, "critical": False},
+                {"id": "C3", "label": "Pha lại và tặng bánh quy", "weight": 35, "critical": True},
+                {"id": "C4", "label": "Cảm ơn", "weight": 15, "critical": False},
+            ],
+        },
+    )
+    assert draft.status_code == 200
+    approved = client.post(
+        f"/v1/admin/sop-versions/{draft.json()['id']}/approve", headers=manager_headers
+    )
+    assert approved.status_code == 200
     s_res = client.post("/v1/training/start", headers=auth_headers_emp_b, json={"sop_id": "sop-complaint-b"}).json()
     # Employee only apologizes without mentioning cookie
     t_res = client.post(

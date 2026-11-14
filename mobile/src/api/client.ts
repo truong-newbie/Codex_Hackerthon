@@ -2,9 +2,16 @@ import {
   TokenResponse, SOPDetailResponse, TrainingSessionResponse, 
   TrainingTurnResponse, FinalResultResponse, HealthResponse,
   SessionSummaryItem, TrainingSessionDetailResponse, TenantAnalyticsResponse,
-  StepItem, RubricItem, SOPVersionDetail
+  StepItem, RubricItem, SOPVersionDetail, ApproveResponse
 } from './types';
 import { DEFAULT_API_URL } from '../constants/config';
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status?: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 class ApiClient {
   private baseUrl: string = (DEFAULT_API_URL || 'http://10.0.2.2:8000').trim().replace(/\/+$/, '');
@@ -52,7 +59,7 @@ class ApiClient {
             errorDetail = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
           }
         } catch (_) {}
-        throw new Error(errorDetail);
+        throw new ApiError(errorDetail, response.status);
       }
 
       return await response.json() as T;
@@ -98,8 +105,8 @@ class ApiClient {
     });
   }
 
-  async approveSopVersion(versionId: string): Promise<SOPVersionDetail> {
-    return this.request<SOPVersionDetail>(`/v1/admin/sop-versions/${versionId}/approve`, {
+  async approveSopVersion(versionId: string): Promise<ApproveResponse> {
+    return this.request<ApproveResponse>(`/v1/admin/sop-versions/${versionId}/approve`, {
       method: 'POST',
     });
   }

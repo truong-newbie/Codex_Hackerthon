@@ -1,15 +1,27 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import TrainingSession, SOPVersion, SOP, Account
+from ..models import TrainingSession, TrainingResult, SOPVersion, SOP, Account
 from ..schemas import (
-    CreateDraftRequest, SOPVersionDetail, ApproveResponse, UserInfo,
+    CreateDraftRequest, CreateSOPRequest, SOPDetailResponse, SOPVersionDetail, ApproveResponse, UserInfo,
     TenantAnalyticsResponse, ManagerSessionRecord, EvaluationEvidence
 )
 from ..auth import require_manager
 from ..services.sop_service import sop_service
 
 router = APIRouter(prefix="/v1/admin", tags=["Admin / Manager Studio"])
+
+@router.post("/sops", response_model=SOPDetailResponse, status_code=201)
+def create_sop(
+    payload: CreateSOPRequest,
+    current_manager: UserInfo = Depends(require_manager),
+    db: Session = Depends(get_db),
+):
+    return sop_service.create_sop(
+        db=db, tenant_id=current_manager.tenant_id, title=payload.title,
+        steps=payload.steps, rubric=payload.rubric,
+    )
 
 @router.post("/sops/{sop_id}/draft", response_model=SOPVersionDetail)
 def create_sop_draft(
@@ -52,6 +64,20 @@ def get_tenant_training_analytics(
     """
     Lấy thống kê năng lực đào tạo & bằng chứng thực hành của toàn bộ nhân viên trong cửa hàng (BR-01 Tenant Isolation).
     """
+    aggregate = (
+        db.query(
+            func.count(TrainingSession.id),
+            func.count(TrainingResult.id),
+            func.coalesce(func.sum(case((TrainingResult.passed.is_(True), 1), else_=0)), 0),
+            func.coalesce(func.sum(TrainingResult.score), 0),
+            func.coalesce(func.sum(case((TrainingResult.critical_failure.is_(True), 1), else_=0)), 0),
+        )
+        .outerjoin(TrainingResult, TrainingResult.session_id == TrainingSession.id)
+        .filter(TrainingSession.tenant_id == current_manager.tenant_id)
+        .one()
+    )
+    total_sessions, completed_sessions, passed_count, total_score_sum, critical_failure_count = aggregate
+
     sessions = (
         db.query(TrainingSession)
         .filter(TrainingSession.tenant_id == current_manager.tenant_id)
@@ -60,11 +86,6 @@ def get_tenant_training_analytics(
         .all()
     )
     
-    total_sessions = len(sessions)
-    completed_sessions = 0
-    passed_count = 0
-    total_score_sum = 0
-    critical_failure_count = 0
     records = []
     
     for s in sessions:
@@ -79,15 +100,9 @@ def get_tenant_training_analytics(
         coaching_tip = None
         
         if s.completed and s.result:
-            completed_sessions += 1
             score = s.result.score
             passed = s.result.passed
             crit_fail = s.result.critical_failure
-            total_score_sum += score
-            if passed:
-                passed_count += 1
-            if crit_fail:
-                critical_failure_count += 1
             payload = s.result.payload_json or {}
             evidence_list = [EvaluationEvidence(**ev) for ev in payload.get("evidence", [])]
             coaching_tip = payload.get("coaching_tip")

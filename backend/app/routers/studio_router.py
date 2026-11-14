@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
+from ..config import settings
 
 router = APIRouter(tags=["Manager Studio Web UI"])
 
@@ -32,7 +33,7 @@ STUDIO_HTML = """<!DOCTYPE html>
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
     h1, h2, h3 { margin-top: 0; }
     label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
-    input, textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+    input, textarea, select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
     textarea { min-height: 110px; font-family: monospace; }
     button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 16px; font-weight: 700; font-size: 13px; color: white; background: var(--primary); transition: opacity 0.15s; }
     button:hover { opacity: 0.9; }
@@ -68,20 +69,19 @@ STUDIO_HTML = """<!DOCTYPE html>
       <div>
         <div class="card">
           <h3>1. Đăng nhập Store Manager</h3>
-          <div class="quick-row">
-            <button class="btn-outline" onclick="quickLogin('manager_a')">☕ Manager Café A</button>
-            <button class="btn-outline" onclick="quickLogin('manager_b')">🌿 Manager Café B</button>
-          </div>
+          __DEMO_ACTIONS__
           <label>Tài khoản</label>
-          <input id="username" value="manager_b" />
+          <input id="username" value="__DEMO_USERNAME__" />
           <label>Mật khẩu</label>
-          <input id="password" type="password" value="ShiftLens@2026" />
+          <input id="password" type="password" value="__DEMO_PASSWORD__" />
           <button style="width:100%" onclick="login()">Đăng Nhập Quản Lý</button>
           <div id="userInfo" style="margin-top:12px;font-size:13px;color:#38bdf8;"></div>
         </div>
 
         <div class="card">
           <h3>2. Lịch sử Phiên bản SOP</h3>
+          <label for="sopSelect">Chọn SOP</label>
+          <select id="sopSelect" aria-label="Chọn SOP"></select>
           <div id="versionsList" style="font-size:13px;color:var(--muted);">Chưa đăng nhập.</div>
         </div>
       </div>
@@ -91,8 +91,12 @@ STUDIO_HTML = """<!DOCTYPE html>
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <h3 style="margin:0;" id="sopTitleHeading">3. Trình Soạn Thảo SOP & Rubric</h3>
-            <button class="btn-amber" onclick="applyDemoV2Preset()">⚡ Nạp Mẫu Demo SOP v2</button>
+            __DEMO_PRESET__
           </div>
+
+          <label for="newSopTitle">Tên SOP mới</label>
+          <input id="newSopTitle" placeholder="Ví dụ: Xử lý đồ uống sai công thức" />
+          <button class="btn-outline" onclick="createNewSop()">Tạo SOP mới từ Steps và Rubric bên dưới</button>
 
           <label>Các bước thực hiện SOP (Steps JSON - Unique IDs):</label>
           <textarea id="stepsInput"></textarea>
@@ -146,11 +150,19 @@ STUDIO_HTML = """<!DOCTYPE html>
   <script>
     let token = '';
     let currentSop = null;
+    let allSops = [];
     let latestDraftId = null;
 
     function logApi(title, data) {
       const box = document.getElementById('apiLog');
       box.textContent = `[${new Date().toLocaleTimeString()}] ${title}:\\n` + JSON.stringify(data, null, 2);
+    }
+
+    function makeNode(tag, className, value) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (value !== undefined && value !== null) node.textContent = String(value);
+      return node;
     }
 
     async function checkHealth() {
@@ -165,7 +177,7 @@ STUDIO_HTML = """<!DOCTYPE html>
 
     function quickLogin(user) {
       document.getElementById('username').value = user;
-      document.getElementById('password').value = 'ShiftLens@2026';
+      document.getElementById('password').value = '__DEMO_PASSWORD__';
       login();
     }
 
@@ -178,14 +190,14 @@ STUDIO_HTML = """<!DOCTYPE html>
         body: JSON.stringify({ username_or_email, password })
       });
       const data = await res.json();
-      logApi('POST /v1/auth/login', data);
+      logApi('POST /v1/auth/login', { ok: res.ok, user: data.user, detail: data.detail });
       if (!res.ok) {
         alert(data.detail || 'Đăng nhập thất bại');
         return;
       }
       token = data.access_token;
-      document.getElementById('userInfo').innerHTML =
-        `✓ Đã đăng nhập: <b>${data.user.full_name}</b><br/>📍 Cửa hàng: <b>${data.user.tenant_name}</b> (${data.user.role})`;
+      document.getElementById('userInfo').textContent =
+        `✓ Đã đăng nhập: ${data.user.full_name || data.user.username} | 📍 Cửa hàng: ${data.user.tenant_name} (${data.user.role})`;
       await loadSops();
       await loadAnalytics();
     }
@@ -196,16 +208,52 @@ STUDIO_HTML = """<!DOCTYPE html>
       });
       const sops = await res.json();
       logApi('GET /v1/sops', sops);
-      if (!sops.length) return;
-      currentSop = sops[0];
-      document.getElementById('sopTitleHeading').textContent = `3. SOP: ${currentSop.title}`;
-      if (currentSop.active_version) {
-        document.getElementById('stepsInput').value = JSON.stringify(currentSop.active_version.steps, null, 2);
-        document.getElementById('rubricInput').value = JSON.stringify(currentSop.active_version.rubric, null, 2);
+      if (!res.ok || !Array.isArray(sops)) return;
+      const previousId = currentSop?.id;
+      allSops = sops;
+      const selector = document.getElementById('sopSelect');
+      selector.replaceChildren();
+      for (const sop of sops) {
+        const option = makeNode('option', '', sop.title);
+        option.value = sop.id;
+        selector.appendChild(option);
+      }
+      if (!sops.length) {
+        currentSop = null;
+        document.getElementById('versionsList').textContent = 'Chưa có SOP.';
+        document.getElementById('stepsInput').value = JSON.stringify([
+          { id: 'S1', instruction: 'Lắng nghe và xác minh yêu cầu của khách.' }
+        ], null, 2);
+        document.getElementById('rubricInput').value = JSON.stringify([
+          { id: 'C1', label: 'Xác minh và xử lý đúng quy trình', weight: 100, critical: true }
+        ], null, 2);
         updateWeightSum();
+        return;
+      }
+      currentSop = sops.find(sop => sop.id === previousId) || sops[0];
+      selector.value = currentSop.id;
+      showCurrentSop();
+    }
+
+    function showCurrentSop() {
+      if (!currentSop) return;
+      document.getElementById('sopTitleHeading').textContent = `3. SOP: ${currentSop.title}`;
+      const editable = currentSop.versions.find(v => v.status === 'draft') || currentSop.active_version;
+      if (editable) {
+        document.getElementById('stepsInput').value = JSON.stringify(editable.steps, null, 2);
+        document.getElementById('rubricInput').value = JSON.stringify(editable.rubric, null, 2);
+        updateWeightSum();
+      } else {
+        document.getElementById('stepsInput').value = '';
+        document.getElementById('rubricInput').value = '';
       }
       renderVersions(currentSop.versions, currentSop.active_version?.id);
     }
+
+    document.getElementById('sopSelect').addEventListener('change', event => {
+      currentSop = allSops.find(sop => sop.id === event.target.value) || null;
+      showCurrentSop();
+    });
 
     async function loadAnalytics() {
       if (!token) return;
@@ -220,57 +268,71 @@ STUDIO_HTML = """<!DOCTYPE html>
       document.getElementById('kpiCritical').textContent = data.critical_failure_count;
 
       const listEl = document.getElementById('analyticsList');
+      listEl.replaceChildren();
       if (!data.recent_sessions.length) {
-        listEl.innerHTML = 'Chưa có phiên thực hành nào từ nhân viên của cửa hàng.';
+        listEl.textContent = 'Chưa có phiên thực hành nào từ nhân viên của cửa hàng.';
         return;
       }
-      listEl.innerHTML = data.recent_sessions.map(s => {
-        const statusHtml = s.completed
-          ? (s.passed
-              ? `<span class="status-pill st-approved">✓ ĐẠT (${s.score}/100)</span>`
-              : `<span class="status-pill" style="background:#7f1d1d;color:#fecaca;">✗ CHƯA ĐẠT (${s.score}/100)${s.critical_failure ? ' • CRITICAL FAIL' : ''}</span>`)
-          : `<span class="status-pill st-draft">⏳ Đang học (${s.turns_count}/4 lượt)</span>`;
-
-        const quotesHtml = (s.evidence || [])
-          .filter(ev => ev.passed && ev.exact_quote)
-          .map(ev => `<span class="quote-chip">✓ ${ev.criterion_id}: "${ev.exact_quote}"</span>`)
-          .join('');
-
-        return `
-          <div class="session-row">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div>
-                <b>👤 ${s.employee_name} (${s.employee_username})</b>
-                <span style="margin-left:8px;font-size:11px;color:#c7d2fe;background:#312e81;padding:2px 6px;border-radius:4px;">📌 Pinned: v${s.sop_version_no} (${s.sop_version_id})</span>
-              </div>
-              ${statusHtml}
-            </div>
-            <div style="margin-top:6px;">${quotesHtml || '<span style="font-size:12px;color:#64748b;">Chưa có bằng chứng đạt hoặc đang trong phiên.</span>'}</div>
-          </div>
-        `;
-      }).join('');
+      for (const s of data.recent_sessions) {
+        const row = makeNode('div', 'session-row');
+        const header = makeNode('div');
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+        const identity = makeNode('div');
+        identity.appendChild(makeNode('b', '', `👤 ${s.employee_name} (${s.employee_username})`));
+        const pin = makeNode('span', '', `📌 Pinned: v${s.sop_version_no} (${s.sop_version_id})`);
+        pin.style.cssText = 'margin-left:8px;font-size:11px;color:#c7d2fe;background:#312e81;padding:2px 6px;border-radius:4px;';
+        identity.appendChild(pin);
+        const status = makeNode('span', 'status-pill');
+        if (s.completed) {
+          status.textContent = s.passed ? `✓ ĐẠT (${s.score}/100)` : `✗ CHƯA ĐẠT (${s.score}/100)${s.critical_failure ? ' • CRITICAL FAIL' : ''}`;
+          status.classList.add(s.passed ? 'st-approved' : 'st-superseded');
+        } else {
+          status.textContent = `⏳ Đang học (${s.turns_count}/4 lượt)`;
+          status.classList.add('st-draft');
+        }
+        header.append(identity, status);
+        row.appendChild(header);
+        const quotes = makeNode('div');
+        quotes.style.marginTop = '6px';
+        const passedEvidence = (s.evidence || []).filter(ev => ev.passed && ev.exact_quote);
+        if (passedEvidence.length) {
+          for (const ev of passedEvidence) quotes.appendChild(makeNode('span', 'quote-chip', `✓ ${ev.criterion_id}: "${ev.exact_quote}"`));
+        } else {
+          const empty = makeNode('span', '', 'Chưa có bằng chứng đạt hoặc đang trong phiên.');
+          empty.style.cssText = 'font-size:12px;color:#64748b;';
+          quotes.appendChild(empty);
+        }
+        row.appendChild(quotes);
+        listEl.appendChild(row);
+      }
     }
 
     function renderVersions(versions, activeId) {
       const container = document.getElementById('versionsList');
       latestDraftId = null;
-      container.innerHTML = versions.map(v => {
+      container.replaceChildren();
+      for (const v of versions) {
         if (v.status === 'draft' && !latestDraftId) latestDraftId = v.id;
         const stClass = v.status === 'approved' ? 'st-approved' : (v.status === 'draft' ? 'st-draft' : 'st-superseded');
         const activeMark = v.id === activeId ? ' (ACTIVE)' : '';
-        return `
-          <div class="version-item">
-            <div>
-              <b>Phiên bản v${v.version_no}${activeMark}</b>
-              <div style="font-size:11px;color:#94a3b8;">ID: ${v.id}</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <span class="status-pill ${stClass}">${v.status}</span>
-              ${v.status === 'draft' ? `<button class="btn-green" style="padding:4px 8px;font-size:11px;" onclick="approveVersion('${v.id}')">Duyệt</button>` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
+        const row = makeNode('div', 'version-item');
+        const details = makeNode('div');
+        details.appendChild(makeNode('b', '', `Phiên bản v${v.version_no}${activeMark}`));
+        const id = makeNode('div', '', `ID: ${v.id}`);
+        id.style.cssText = 'font-size:11px;color:#94a3b8;';
+        details.appendChild(id);
+        const actions = makeNode('div');
+        actions.style.cssText = 'display:flex;gap:6px;align-items:center;';
+        actions.appendChild(makeNode('span', `status-pill ${stClass}`, v.status));
+        if (v.status === 'draft') {
+          const approveButton = makeNode('button', 'btn-green', 'Duyệt');
+          approveButton.style.cssText = 'padding:4px 8px;font-size:11px;';
+          approveButton.addEventListener('click', () => approveVersion(v.id));
+          actions.appendChild(approveButton);
+        }
+        row.append(details, actions);
+        container.appendChild(row);
+      }
     }
 
     function updateWeightSum() {
@@ -284,8 +346,8 @@ STUDIO_HTML = """<!DOCTYPE html>
     }
 
     function applyDemoV2Preset() {
-      if (!currentSop) {
-        alert('Vui lòng đăng nhập Manager trước!');
+      if (!currentSop || currentSop.id !== 'sop-complaint-b') {
+        alert('Mẫu demo v2 chỉ áp dụng cho SOP Café B. Hãy chọn SOP này trước.');
         return;
       }
       const steps = [
@@ -295,6 +357,29 @@ STUDIO_HTML = """<!DOCTYPE html>
       ];
       document.getElementById('stepsInput').value = JSON.stringify(steps, null, 2);
       logApi('Preset Loaded', { message: 'Đã nạp nội dung cập nhật SOP v2. Hãy nhấn Tạo Bản Thảo Mới -> Phê Duyệt!' });
+    }
+
+    async function createNewSop() {
+      if (!token) return alert('Vui lòng đăng nhập trước!');
+      const title = document.getElementById('newSopTitle').value.trim();
+      if (title.length < 3) return alert('Tên SOP phải có ít nhất 3 ký tự.');
+      try {
+        const steps = JSON.parse(document.getElementById('stepsInput').value);
+        const rubric = JSON.parse(document.getElementById('rubricInput').value);
+        const res = await fetch('/v1/admin/sops', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ title, steps, rubric })
+        });
+        const data = await res.json();
+        logApi('POST /v1/admin/sops', data);
+        if (!res.ok) return alert(data.detail || 'Lỗi tạo SOP');
+        currentSop = { id: data.id };
+        document.getElementById('newSopTitle').value = '';
+        await loadSops();
+      } catch (e) {
+        alert('Không thể tạo SOP: ' + e.message);
+      }
     }
 
     async function createDraft() {
@@ -345,4 +430,18 @@ STUDIO_HTML = """<!DOCTYPE html>
 @router.get("/studio", response_class=HTMLResponse, include_in_schema=True)
 def manager_studio_ui():
     """Giao diện No-Code Manager Studio tích hợp sẵn phục vụ cấu hình SOP v2 và xem báo cáo năng lực nhân viên."""
-    return HTMLResponse(content=STUDIO_HTML)
+    demo_actions = (
+        '<div class="quick-row">'
+        '<button class="btn-outline" onclick="quickLogin(\'manager_a\')">☕ Manager Café A</button>'
+        '<button class="btn-outline" onclick="quickLogin(\'manager_b\')">🌿 Manager Café B</button>'
+        '</div>'
+    ) if settings.DEMO_MODE else ""
+    demo_preset = (
+        '<button class="btn-amber" onclick="applyDemoV2Preset()">⚡ Nạp Mẫu Demo SOP v2</button>'
+    ) if settings.DEMO_MODE else ""
+    html = (STUDIO_HTML
+        .replace("__DEMO_ACTIONS__", demo_actions)
+        .replace("__DEMO_PRESET__", demo_preset)
+        .replace("__DEMO_USERNAME__", "manager_b" if settings.DEMO_MODE else "")
+        .replace("__DEMO_PASSWORD__", "ShiftLens@2026" if settings.DEMO_MODE else ""))
+    return HTMLResponse(content=html)

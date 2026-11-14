@@ -2,8 +2,13 @@ from datetime import datetime, timezone
 from .database import engine, SessionLocal, Base
 from .models import Tenant, Account, Membership, SOP, SOPVersion
 from .auth import hash_password
+from .config import settings
 
 def seed_database():
+    if settings.ENVIRONMENT == "production":
+        raise RuntimeError("Demo seed is disabled in production")
+    if settings.ENVIRONMENT != "test" and not settings.DEMO_MODE:
+        raise RuntimeError("Set DEMO_MODE=true explicitly before creating demo accounts")
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
@@ -14,7 +19,6 @@ def seed_database():
             return
 
         print("Seeding ShiftLens initial data...")
-        default_password_hash = hash_password("ShiftLens@2026")
         
         # 1. Seed Tenant A: Café Sữa Đá Cầu Giấy (Strict No-Refund)
         tenant_a = Tenant(
@@ -28,14 +32,14 @@ def seed_database():
             id="user-manager-a",
             username="manager_a",
             email="manager_a@shiftlens.com",
-            password_hash=default_password_hash,
+            password_hash=hash_password("ShiftLens@2026"),
             full_name="Nguyễn Văn Quản Lý (Café A)"
         )
         emp_a = Account(
             id="user-emp-a",
             username="emp_a",
             email="emp_a@shiftlens.com",
-            password_hash=default_password_hash,
+            password_hash=hash_password("ShiftLens@2026"),
             full_name="Trần Thị Nhân Viên (Café A)"
         )
         db.add_all([manager_a, emp_a])
@@ -88,14 +92,14 @@ def seed_database():
             id="user-manager-b",
             username="manager_b",
             email="manager_b@shiftlens.com",
-            password_hash=default_password_hash,
+            password_hash=hash_password("ShiftLens@2026"),
             full_name="Lê Hoàng Quản Lý (Café B)"
         )
         emp_b = Account(
             id="user-emp-b",
             username="emp_b",
             email="emp_b@shiftlens.com",
-            password_hash=default_password_hash,
+            password_hash=hash_password("ShiftLens@2026"),
             full_name="Phạm Minh Nhân Viên (Café B)"
         )
         db.add_all([manager_b, emp_b])

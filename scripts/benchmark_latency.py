@@ -7,14 +7,22 @@ import os
 import sys
 import time
 import statistics
+import argparse
+import tempfile
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
+# Benchmark data must never be written into an operator's configured database.
+_isolated_dir = tempfile.TemporaryDirectory(prefix="shiftlens-benchmark-")
+_db_path = (Path(_isolated_dir.name) / "benchmark.db").resolve()
+os.environ["DATABASE_URL"] = f"sqlite:///{_db_path.as_posix()}"
+os.environ["ENVIRONMENT"] = "test"
+os.environ["AI_MODE"] = "stub"
+
 from fastapi.testclient import TestClient
 from app.main import app
-from app.database import Base, engine
 from app.seed import seed_database
 
 def percentile(data, p):
@@ -29,7 +37,6 @@ def percentile(data, p):
     return sorted_data[f] * (c - k) + sorted_data[c] * (k - f)
 
 def run_benchmark(runs: int = 10):
-    Base.metadata.create_all(bind=engine)
     seed_database()
     client = TestClient(app)
 
@@ -95,4 +102,12 @@ def run_benchmark(runs: int = 10):
         print(f"| {name} | {runs} | {mean_v:.1f} | {p50_v:.1f} | **{p95_v:.1f}** | {max_v:.1f} |")
 
 if __name__ == "__main__":
-    run_benchmark(10)
+    parser = argparse.ArgumentParser(description="Benchmark isolated ShiftLens flows using stub AI")
+    parser.add_argument("--runs", type=int, default=10)
+    args = parser.parse_args()
+    if not 1 <= args.runs <= 100:
+        parser.error("--runs must be between 1 and 100")
+    try:
+        run_benchmark(args.runs)
+    finally:
+        _isolated_dir.cleanup()

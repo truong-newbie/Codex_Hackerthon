@@ -1,5 +1,30 @@
-# Quick test runner for ShiftLens backend
-Write-Host "Running backend tests with pytest..." -ForegroundColor Cyan
-Set-Location "$PSScriptRoot\..\backend"
-python -m pytest -v
-Set-Location $PSScriptRoot
+param(
+    [string]$PythonExe
+)
+
+$ErrorActionPreference = "Stop"
+$backendDir = Join-Path (Split-Path -Parent $PSScriptRoot) "backend"
+
+if (-not $PythonExe) {
+    foreach ($candidate in @("python", "py")) {
+        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($command) {
+            $PythonExe = $command.Source
+            break
+        }
+    }
+}
+
+if (-not $PythonExe -or -not (Test-Path -LiteralPath $PythonExe)) {
+    throw "Python executable not found. Pass -PythonExe with the absolute path to python.exe."
+}
+
+Push-Location $backendDir
+try {
+    & $PythonExe -m pytest -v
+    if ($LASTEXITCODE -ne 0) {
+        throw "Backend tests failed with exit code $LASTEXITCODE."
+    }
+} finally {
+    Pop-Location
+}

@@ -72,6 +72,17 @@ class CreateDraftRequest(BaseModel):
     steps: List[StepItem] = Field(..., min_length=1)
     rubric: List[RubricItem] = Field(..., min_length=1)
 
+class CreateSOPRequest(CreateDraftRequest):
+    title: str = Field(..., min_length=3, max_length=200)
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, value: str) -> str:
+        title = value.strip()
+        if len(title) < 3:
+            raise ValueError("Tên SOP phải có ít nhất 3 ký tự")
+        return title
+
 class ApproveResponse(BaseModel):
     message: str
     active_version_id: str

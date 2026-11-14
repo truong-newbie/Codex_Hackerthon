@@ -58,6 +58,7 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
+  const [needsSync, setNeedsSync] = useState(false);
   const [turnsCount, setTurnsCount] = useState(initialTurns.length || session.turns_count || 0);
   const [lastLatency, setLastLatency] = useState<number | undefined>(session.latency_ms);
   const flatListRef = useRef<FlatList>(null);
@@ -100,41 +101,56 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({
 
   const handleSend = async () => {
     const textToSend = inputText.trim();
-    if (!textToSend) return;
+    if (!textToSend || loading || evaluating || needsSync) return;
     if (turnsCount >= 4) {
       Alert.alert('Thông báo', 'Đã đạt giới hạn tối đa 4 lượt. Vui lòng nhấn Chấm điểm.');
       return;
     }
 
-    const empMsgId = `emp-${Date.now()}`;
-    const newMessages: MessageItem[] = [
-      ...messages,
-      { id: empMsgId, sender: 'employee', text: textToSend, turnNo: turnsCount + 1 }
-    ];
-    setMessages(newMessages);
-    setInputText('');
     setLoading(true);
 
     try {
       const res = await api.sendTurn(session.session_id, textToSend);
-      const custMsgId = `cust-${Date.now()}`;
-      setMessages([
-        ...newMessages,
-        { id: custMsgId, sender: 'customer', text: res.customer_text, turnNo: res.turn_no }
+      setMessages(previous => [
+        ...previous,
+        { id: `emp-${res.turn_no}`, sender: 'employee', text: res.employee_text, turnNo: res.turn_no },
+        { id: `cust-${res.turn_no}`, sender: 'customer', text: res.customer_text, turnNo: res.turn_no }
       ]);
+      setInputText('');
       setTurnsCount(res.turn_no);
       if (res.latency_ms !== undefined) {
         setLastLatency(res.latency_ms);
       }
       speakText(res.customer_text);
     } catch (err: any) {
-      Alert.alert('Lỗi gửi tin', err.message);
+      try {
+        const detail = await api.getSessionDetail(session.session_id);
+        const committed = detail.turns.find(
+          turn => turn.turn_no === turnsCount + 1 && turn.employee_text === textToSend
+        );
+        if (committed) {
+          setMessages(previous => [
+            ...previous,
+            { id: `emp-${committed.turn_no}`, sender: 'employee', text: committed.employee_text, turnNo: committed.turn_no },
+            { id: `cust-${committed.turn_no}`, sender: 'customer', text: committed.customer_text, turnNo: committed.turn_no }
+          ]);
+          setTurnsCount(committed.turn_no);
+          setInputText('');
+        } else {
+          setNeedsSync(true);
+          Alert.alert('Chưa xác định trạng thái tin', 'Yêu cầu có thể vẫn đang xử lý. Hãy quay lại danh sách và mở lại phiên từ lịch sử trước khi gửi tiếp.');
+        }
+      } catch (_) {
+        setNeedsSync(true);
+        Alert.alert('Chưa xác định trạng thái tin', 'Mạng bị gián đoạn. Hãy mở lại phiên từ lịch sử để đồng bộ trước khi gửi lại.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleEvaluate = async () => {
+    if (loading || evaluating || needsSync) return;
     if (turnsCount < 1) {
       Alert.alert('Chưa thể đánh giá', 'Vui lòng thực hiện ít nhất 1 lượt đối thoại với khách trước khi nhận đánh giá.');
       return;
@@ -159,7 +175,7 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <TouchableOpacity onPress={onBack} style={[styles.backBtn, (loading || evaluating) && styles.disabledBtn]} disabled={loading || evaluating}>
             <Text style={styles.backBtnText}>← SOP</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
@@ -167,9 +183,9 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({
             <Text style={styles.turnIndicator}>Lượt đối thoại: {turnsCount}/4</Text>
           </View>
           <TouchableOpacity 
-            style={[styles.evalBtn, turnsCount < 1 && styles.disabledBtn]} 
+            style={[styles.evalBtn, (turnsCount < 1 || loading || needsSync) && styles.disabledBtn]}
             onPress={handleEvaluate}
-            disabled={evaluating || turnsCount < 1}
+            disabled={evaluating || loading || needsSync || turnsCount < 1}
           >
             {evaluating ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
@@ -178,6 +194,12 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({
             )}
           </TouchableOpacity>
         </View>
+
+        {needsSync && (
+          <Text style={styles.turnIndicator}>
+            Trạng thái tin chưa rõ. Quay lại danh sách và mở lại phiên từ lịch sử để đồng bộ.
+          </Text>
+        )}
 
         {/* Technical Telemetry Proof Bar (G1, G2, G3) */}
         <View style={styles.telemetryBar}>
@@ -255,15 +277,16 @@ export const SimulationScreen: React.FC<SimulationScreenProps> = ({
             placeholder={turnsCount >= 4 ? "Đã xong 4 lượt. Nhấn 'Chấm điểm' ở trên." : "Nhập câu trả lời của bạn..."}
             placeholderTextColor="#64748B"
             editable={!loading && !evaluating && turnsCount < 4}
+            maxLength={1000}
             multiline
           />
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!inputText.trim() || loading || turnsCount >= 4) && styles.disabledBtn
+              (!inputText.trim() || loading || evaluating || turnsCount >= 4) && styles.disabledBtn
             ]}
             onPress={handleSend}
-            disabled={!inputText.trim() || loading || turnsCount >= 4}
+            disabled={!inputText.trim() || loading || evaluating || needsSync || turnsCount >= 4}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
