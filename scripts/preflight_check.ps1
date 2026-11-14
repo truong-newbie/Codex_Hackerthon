@@ -1,4 +1,4 @@
-﻿# ShiftLens Pre-Flight Readiness Check Script (Hackathon Stage Gate Verification)
+# ShiftLens Pre-Flight Readiness Check Script (Hackathon Stage Gate Verification)
 $ErrorActionPreference = "Stop"
 $rootDir = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $rootDir "backend"
