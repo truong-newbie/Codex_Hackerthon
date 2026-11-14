@@ -23,7 +23,7 @@ STUDIO_HTML = """<!DOCTYPE html>
     }
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
     body { margin: 0; background: var(--bg); color: var(--text); padding: 24px; }
-    .container { max-width: 1120px; margin: 0 auto; }
+    .container { max-width: 1180px; margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
     .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
     .badge-live { background: #065f46; color: #6ee7b7; }
@@ -33,7 +33,7 @@ STUDIO_HTML = """<!DOCTYPE html>
     h1, h2, h3 { margin-top: 0; }
     label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
     input, textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
-    textarea { min-height: 120px; font-family: monospace; }
+    textarea { min-height: 110px; font-family: monospace; }
     button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 16px; font-weight: 700; font-size: 13px; color: white; background: var(--primary); transition: opacity 0.15s; }
     button:hover { opacity: 0.9; }
     .btn-green { background: var(--green); }
@@ -45,7 +45,12 @@ STUDIO_HTML = """<!DOCTYPE html>
     .st-approved { background: #065f46; color: #a7f3d0; }
     .st-draft { background: #78350f; color: #fde68a; }
     .st-superseded { background: #334155; color: #94a3b8; }
-    .log-box { background: #020617; border: 1px solid var(--border); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; color: #38bdf8; max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .kpi-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+    .kpi-val { font-size: 26px; font-weight: 800; margin-top: 4px; }
+    .session-row { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+    .quote-chip { font-size: 12px; color: #a7f3d0; background: #064e3b; padding: 4px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; margin-right: 6px; }
+    .log-box { background: #020617; border: 1px solid var(--border); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; color: #38bdf8; max-height: 180px; overflow-y: auto; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -53,7 +58,7 @@ STUDIO_HTML = """<!DOCTYPE html>
     <div class="header">
       <div>
         <h1 style="margin-bottom:4px;">ShiftLens — Manager Studio</h1>
-        <div style="color:var(--muted);font-size:13px;">Quản trị SOP, Trọng số Rubric (100đ) & Phê duyệt Phiên bản (REST + Bearer JWT)</div>
+        <div style="color:var(--muted);font-size:13px;">Quản trị SOP, Trọng số Rubric (100đ), Phê duyệt Phiên bản & Báo cáo Năng lực Nhân viên</div>
       </div>
       <div id="healthBadge" class="badge badge-stub">Checking AI...</div>
     </div>
@@ -81,7 +86,7 @@ STUDIO_HTML = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Right Column: SOP Steps & Rubric Editor -->
+      <!-- Right Column: SOP Steps & Rubric Editor + Employee Analytics -->
       <div>
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -103,8 +108,36 @@ STUDIO_HTML = """<!DOCTYPE html>
             <button class="btn-green" id="approveBtn" onclick="approveLatestDraft()">✅ Bước 2: Phê Duyệt & Kích Hoạt (Approve vN)</button>
           </div>
 
-          <label style="margin-top:16px;">Nhật ký Phản hồi REST API (Bằng chứng kỹ thuật):</label>
+          <label style="margin-top:12px;">Nhật ký Phản hồi REST API (Bằng chứng kỹ thuật):</label>
           <div id="apiLog" class="log-box">Sẵn sàng kết nối FastAPI...</div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="margin:0;">4. Báo Cáo Năng Lực & Bằng Chứng Nhân Viên (Buyer Dashboard)</h3>
+            <button class="btn-outline" onclick="loadAnalytics()">🔄 Làm mới Kết quả</button>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-box">
+              <div style="font-size:11px;color:var(--muted);">TỔNG PHIÊN HỌC</div>
+              <div class="kpi-val" id="kpiTotal">0</div>
+            </div>
+            <div class="kpi-box">
+              <div style="font-size:11px;color:var(--muted);">TỶ LỆ ĐẠT (PASS RATE)</div>
+              <div class="kpi-val" style="color:#10b981;" id="kpiPassRate">0%</div>
+            </div>
+            <div class="kpi-box">
+              <div style="font-size:11px;color:var(--muted);">ĐIỂM TRUNG BÌNH</div>
+              <div class="kpi-val" style="color:#38bdf8;" id="kpiAvgScore">0</div>
+            </div>
+            <div class="kpi-box">
+              <div style="font-size:11px;color:var(--muted);">VI PHẠM CRITICAL</div>
+              <div class="kpi-val" style="color:#ef4444;" id="kpiCritical">0</div>
+            </div>
+          </div>
+
+          <div id="analyticsList" style="font-size:13px;color:var(--muted);">Hãy đăng nhập Store Manager để xem kết quả thực hành của nhân viên.</div>
         </div>
       </div>
     </div>
@@ -154,6 +187,7 @@ STUDIO_HTML = """<!DOCTYPE html>
       document.getElementById('userInfo').innerHTML =
         `✓ Đã đăng nhập: <b>${data.user.full_name}</b><br/>📍 Cửa hàng: <b>${data.user.tenant_name}</b> (${data.user.role})`;
       await loadSops();
+      await loadAnalytics();
     }
 
     async function loadSops() {
@@ -171,6 +205,50 @@ STUDIO_HTML = """<!DOCTYPE html>
         updateWeightSum();
       }
       renderVersions(currentSop.versions, currentSop.active_version?.id);
+    }
+
+    async function loadAnalytics() {
+      if (!token) return;
+      const res = await fetch('/v1/admin/analytics', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById('kpiTotal').textContent = data.total_sessions;
+      document.getElementById('kpiPassRate').textContent = `${data.pass_rate}%`;
+      document.getElementById('kpiAvgScore').textContent = `${data.average_score}/100`;
+      document.getElementById('kpiCritical').textContent = data.critical_failure_count;
+
+      const listEl = document.getElementById('analyticsList');
+      if (!data.recent_sessions.length) {
+        listEl.innerHTML = 'Chưa có phiên thực hành nào từ nhân viên của cửa hàng.';
+        return;
+      }
+      listEl.innerHTML = data.recent_sessions.map(s => {
+        const statusHtml = s.completed
+          ? (s.passed
+              ? `<span class="status-pill st-approved">✓ ĐẠT (${s.score}/100)</span>`
+              : `<span class="status-pill" style="background:#7f1d1d;color:#fecaca;">✗ CHƯA ĐẠT (${s.score}/100)${s.critical_failure ? ' • CRITICAL FAIL' : ''}</span>`)
+          : `<span class="status-pill st-draft">⏳ Đang học (${s.turns_count}/4 lượt)</span>`;
+
+        const quotesHtml = (s.evidence || [])
+          .filter(ev => ev.passed && ev.exact_quote)
+          .map(ev => `<span class="quote-chip">✓ ${ev.criterion_id}: "${ev.exact_quote}"</span>`)
+          .join('');
+
+        return `
+          <div class="session-row">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <b>👤 ${s.employee_name} (${s.employee_username})</b>
+                <span style="margin-left:8px;font-size:11px;color:#c7d2fe;background:#312e81;padding:2px 6px;border-radius:4px;">📌 Pinned: v${s.sop_version_no} (${s.sop_version_id})</span>
+              </div>
+              ${statusHtml}
+            </div>
+            <div style="margin-top:6px;">${quotesHtml || '<span style="font-size:12px;color:#64748b;">Chưa có bằng chứng đạt hoặc đang trong phiên.</span>'}</div>
+          </div>
+        `;
+      }).join('');
     }
 
     function renderVersions(versions, activeId) {
@@ -266,5 +344,5 @@ STUDIO_HTML = """<!DOCTYPE html>
 
 @router.get("/studio", response_class=HTMLResponse, include_in_schema=True)
 def manager_studio_ui():
-    """Giao diện No-Code Manager Studio tích hợp sẵn phục vụ cấu hình và phê duyệt SOP v2."""
+    """Giao diện No-Code Manager Studio tích hợp sẵn phục vụ cấu hình SOP v2 và xem báo cáo năng lực nhân viên."""
     return HTMLResponse(content=STUDIO_HTML)
