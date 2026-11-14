@@ -191,3 +191,33 @@ class TrainingSessionDetailResponse(BaseModel):
     result: Optional[FinalResultResponse] = None
     ai_mode: str
     created_at: datetime
+
+# --- Manager Analytics Schemas ---
+class ManagerSessionRecord(BaseModel):
+    session_id: str
+    employee_id: str
+    employee_username: str
+    employee_name: str
+    sop_id: str
+    sop_title: str
+    sop_version_id: str
+    sop_version_no: int
+    completed: bool
+    turns_count: int
+    score: Optional[int] = None
+    passed: Optional[bool] = None
+    critical_failure: Optional[bool] = None
+    evidence: List[EvaluationEvidence] = []
+    coaching_tip: Optional[str] = None
+    created_at: datetime
+
+class TenantAnalyticsResponse(BaseModel):
+    tenant_id: str
+    tenant_name: str
+    total_sessions: int
+    completed_sessions: int
+    pass_rate: float
+    average_score: float
+    critical_failure_count: int
+    recent_sessions: List[ManagerSessionRecord] = []
+
