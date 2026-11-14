@@ -96,6 +96,8 @@ cd backend
 pip install -r requirements.txt
 
 # Cấu hình demo: copy .env.example thành .env, kiểm tra ENVIRONMENT=development và DEMO_MODE=true.
+# Với database mới: chạy migration trước khi seed.
+python -m alembic upgrade head
 # Lệnh seed chỉ dùng cho dữ liệu mẫu Café A & B; không dùng trên database vận hành.
 python -m app.seed
 

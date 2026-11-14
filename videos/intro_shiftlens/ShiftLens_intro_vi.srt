@@ -1,0 +1,94 @@
+1
+00:00:00,000 --> 00:00:06,382
+Một quy trình có thể rất rõ trên giấy. Nhưng khi khách hàng
+phàn nàn ngay tại quầy,
+
+2
+00:00:06,382 --> 00:00:12,410
+nhân viên phải phản ứng trong vài giây. ShiftLens giúp họ
+luyện tập trước tình huống đó.
+
+3
+00:00:12,960 --> 00:00:17,580
+ShiftLens biến SOP thành bài luyện nghiệp vụ cho nhân viên
+F&B.
+
+4
+00:00:17,580 --> 00:00:23,740
+AI đóng vai khách hàng; hệ thống đánh giá từ bằng chứng trong
+cuộc hội thoại.
+
+5
+00:00:24,290 --> 00:00:31,286
+Quản lý cũng khó quan sát mọi ca làm để huấn luyện từng người.
+ShiftLens nối khoảng cách giữa học và làm.
+
+6
+00:00:31,286 --> 00:00:37,010
+Quản lý cũng khó quan sát mọi ca làm để huấn luyện từng người.
+ShiftLens nối khoảng cách
+
+7
+00:00:37,560 --> 00:00:44,052
+Quản lý thiết lập SOP, chính sách và bộ tiêu chí chấm điểm.
+Mỗi phiên gắn với một phiên
+
+8
+00:00:44,052 --> 00:00:47,810
+bản quy trình để kết quả được đánh giá đúng chuẩn.
+
+9
+00:00:48,360 --> 00:00:56,531
+Café A yêu cầu xin phép quản lý trước khi hoàn tiền. Café B
+cho phép đổi món hoặc tặng voucher
+
+10
+00:00:56,531 --> 00:01:01,200
+trong hạn mức. Một lời phàn nàn, hai cách xử lý đúng.
+
+11
+00:01:01,750 --> 00:01:08,928
+Nhân viên chọn bài tập trên Android, đọc bối cảnh và mục tiêu.
+Khách AI mở lời bằng văn
+
+12
+00:01:08,928 --> 00:01:11,950
+bản; ứng dụng có thể đọc thành tiếng.
+
+13
+00:01:12,500 --> 00:01:19,184
+Khách AI phản hồi theo câu trả lời. Trong tối đa bốn lượt,
+nhân viên cần lắng nghe,
+
+14
+00:01:19,184 --> 00:01:23,640
+kiểm tra và xử lý đúng chính sách bằng lời của mình.
+
+15
+00:01:24,190 --> 00:01:30,615
+Hệ thống trích nguyên văn lời nhân viên. Server kiểm tra câu
+trích trong transcript rồi
+
+16
+00:01:30,615 --> 00:01:34,630
+tính điểm theo rubric, kèm gợi ý rèn luyện tiếp.
+
+17
+00:01:35,180 --> 00:01:41,429
+AI tạo hội thoại và đề xuất trích dẫn. Server kiểm soát quyền
+theo cửa hàng,
+
+18
+00:01:41,429 --> 00:01:49,240
+phiên bản SOP, bằng chứng và điểm số. Hệ thống có chế độ AI
+thật và stub để kiểm thử.
+
+19
+00:01:49,790 --> 00:01:56,154
+Mỗi quy trình trở thành một lần thực hành; mỗi lần thực hành
+có phản hồi rõ ràng.
+
+20
+00:01:56,154 --> 00:02:01,810
+ShiftLens bắt đầu từ quán cà phê, hướng tới đội ngũ tuyến đầu
+tự tin hơn.

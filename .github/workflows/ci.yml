@@ -19,6 +19,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: python -m pip install -r requirements.txt
       - run: python ../scripts/check_config_policy.py
+      - run: python ../scripts/check_alembic_migrations.py
       - run: python -m pytest tests -q
 
   mobile-and-studio:

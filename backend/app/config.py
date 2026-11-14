@@ -16,6 +16,7 @@ class Settings:
     AI_MODE: str = os.getenv("AI_MODE", "stub").lower()  # "live" or "stub"
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    OPERATION_LEASE_SECONDS: int = int(os.getenv("OPERATION_LEASE_SECONDS", "90"))
     
     # DB settings
     # Anchor the default database to backend/, independent of the launch cwd.
@@ -30,6 +31,8 @@ settings = Settings()
 
 if settings.AI_MODE not in {"live", "stub"}:
     raise RuntimeError("AI_MODE must be 'live' or 'stub'")
+if not 30 <= settings.OPERATION_LEASE_SECONDS <= 600:
+    raise RuntimeError("OPERATION_LEASE_SECONDS must be between 30 and 600")
 
 if settings.ENVIRONMENT not in {"development", "test", "staging", "production"}:
     raise RuntimeError("ENVIRONMENT must be development, test, staging, or production")

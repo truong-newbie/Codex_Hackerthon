@@ -112,6 +112,9 @@ class TrainingSessionResponse(BaseModel):
     turns_count: int
     ai_mode: str
     latency_ms: Optional[int] = None
+    state: str = "active"
+    revision: int = 0
+    operation_id: Optional[str] = None
 
 class TrainingTurnRequest(BaseModel):
     message: str = Field(..., min_length=2, max_length=1000)
@@ -141,6 +144,9 @@ class TrainingTurnResponse(BaseModel):
     completed: bool
     ai_mode: str
     latency_ms: Optional[int] = None
+    dialogue_exhausted: bool = False
+    evaluation_completed: bool = False
+    operation_id: Optional[str] = None
 
 class JudgmentDraft(BaseModel):
     criterion_id: str
@@ -173,6 +179,7 @@ class FinalResultResponse(BaseModel):
     coaching_tip: str
     ai_mode: str
     latency_ms: Optional[int] = None
+    operation_id: Optional[str] = None
     disclaimer: str = "Kết quả mô phỏng dùng cho mục đích đào tạo và rèn luyện kỹ năng, không thay thế cho quyết định đánh giá nhân sự chính thức."
 
 class SessionSummaryItem(BaseModel):
@@ -188,6 +195,7 @@ class SessionSummaryItem(BaseModel):
     critical_failure: Optional[bool] = None
     ai_mode: str
     created_at: datetime
+    state: str = "active"
 
 class TrainingSessionDetailResponse(BaseModel):
     session_id: str
@@ -202,6 +210,19 @@ class TrainingSessionDetailResponse(BaseModel):
     result: Optional[FinalResultResponse] = None
     ai_mode: str
     created_at: datetime
+    state: str = "active"
+    revision: int = 0
+    pending_operation_id: Optional[str] = None
+
+
+class OperationStatusResponse(BaseModel):
+    operation_id: str
+    kind: str
+    status: str
+    attempt: int
+    response: Optional[dict] = None
+    error_code: Optional[str] = None
+    lease_until: Optional[datetime] = None
 
 # --- Manager Analytics Schemas ---
 class ManagerSessionRecord(BaseModel):

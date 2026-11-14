@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 
@@ -11,7 +12,7 @@ def inspect(path: Path) -> dict:
     database = path.resolve(strict=True)
     if not database.is_file():
         raise ValueError("Database path must be a file")
-    with sqlite3.connect(database.as_uri() + "?mode=ro", uri=True) as conn:
+    with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as conn:
         conn.execute("PRAGMA query_only=ON")
         tables = [
             name for name, kind in conn.execute("SELECT name, type FROM sqlite_master")

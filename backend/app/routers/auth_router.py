@@ -14,14 +14,14 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         (Account.email == payload.username_or_email)
     ).first()
     
-    if not account or not verify_password(payload.password, account.password_hash):
+    if not account or not account.active or not verify_password(payload.password, account.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Tài khoản hoặc mật khẩu không chính xác"
         )
 
     membership = db.query(Membership).filter(Membership.user_id == account.id).first()
-    if not membership:
+    if not membership or not membership.active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Tài khoản chưa được gán vào bất kỳ cửa hàng nào"
@@ -37,7 +37,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         "sub": account.id,
         "username": account.username,
         "tenant_id": tenant.id,
-        "role": membership.role
+        "role": membership.role,
+        "token_version": account.token_version,
     }
     access_token = create_access_token(data=token_data)
     

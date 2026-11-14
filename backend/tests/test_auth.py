@@ -3,7 +3,7 @@ import hashlib
 from app.auth import hash_password, verify_password
 from app.config import settings
 from app.database import SessionLocal
-from app.models import Account
+from app.models import Account, Membership
 
 
 def test_password_hash_uses_unique_salts():
@@ -75,3 +75,23 @@ def test_get_me(client, auth_headers_emp_a):
     res = client.get("/v1/auth/me", headers=auth_headers_emp_a)
     assert res.status_code == 200
     assert res.json()["username"] == "emp_a"
+
+
+def test_revoked_token_and_inactive_membership_are_denied(client, auth_headers_emp_a):
+    with SessionLocal() as db:
+        account = db.query(Account).filter(Account.username == "emp_a").one()
+        account.token_version += 1
+        db.commit()
+    assert client.get("/v1/auth/me", headers=auth_headers_emp_a).status_code == 401
+
+    fresh_login = client.post("/v1/auth/login", json={
+        "username_or_email": "emp_a", "password": "ShiftLens@2026",
+    })
+    fresh_headers = {"Authorization": f"Bearer {fresh_login.json()['access_token']}"}
+    with SessionLocal() as db:
+        membership = db.query(Membership).filter(
+            Membership.user_id == "user-emp-a", Membership.tenant_id == "tenant-cafe-a",
+        ).one()
+        membership.active = False
+        db.commit()
+    assert client.get("/v1/auth/me", headers=fresh_headers).status_code == 403

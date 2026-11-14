@@ -29,6 +29,8 @@ $previousDemoMode = $env:DEMO_MODE
 $env:DEMO_MODE = "true"
 Push-Location $backendDir
 try {
+    & $PythonExe -m alembic upgrade head
+    if ($LASTEXITCODE -ne 0) { throw "Database migration failed (exit code $LASTEXITCODE)" }
     & $PythonExe -m app.seed
     if ($LASTEXITCODE -ne 0) { throw "Demo seed failed (exit code $LASTEXITCODE)" }
     & $PythonExe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

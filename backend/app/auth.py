@@ -84,15 +84,17 @@ def get_current_user_context(
         )
         
     account = db.query(Account).filter(Account.id == user_id).first()
-    if not account:
+    if not account or not account.active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Người dùng không tồn tại")
+    if payload.get("token_version") != account.token_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Phiên đăng nhập đã hết hiệu lực")
         
     membership = db.query(Membership).filter(
         Membership.user_id == user_id,
         Membership.tenant_id == tenant_id
     ).first()
     
-    if not membership:
+    if not membership or not membership.active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền truy cập vào cửa hàng này")
         
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()

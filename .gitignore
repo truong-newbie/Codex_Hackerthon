@@ -8,6 +8,8 @@ env/
 venv/
 .venv/
 .deps/
+.video-build/
+videos/**/build/
 *.sqlite3
 *.db
 

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
-from .database import engine, SessionLocal, Base
+from sqlalchemy.exc import SQLAlchemyError
+from .database import engine, SessionLocal
 from .models import Tenant, Account, Membership, SOP, SOPVersion
 from .auth import hash_password
 from .config import settings
@@ -9,7 +10,16 @@ def seed_database():
         raise RuntimeError("Demo seed is disabled in production")
     if settings.ENVIRONMENT != "test" and not settings.DEMO_MODE:
         raise RuntimeError("Set DEMO_MODE=true explicitly before creating demo accounts")
-    Base.metadata.create_all(bind=engine)
+    if settings.ENVIRONMENT != "test":
+        try:
+            with engine.connect() as connection:
+                version = connection.exec_driver_sql(
+                    "SELECT version_num FROM alembic_version"
+                ).scalar_one_or_none()
+        except SQLAlchemyError as error:
+            raise RuntimeError("Run and verify 'alembic upgrade head' before demo seed") from error
+        if version != "20261114_0002":
+            raise RuntimeError("Run and verify 'alembic upgrade head' before demo seed")
     db = SessionLocal()
     
     try:

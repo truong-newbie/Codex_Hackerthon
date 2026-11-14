@@ -18,6 +18,11 @@ from app.database import Base, engine  # noqa: E402
 from app.seed import seed_database  # noqa: E402
 
 
+def pytest_sessionfinish(session, exitstatus):
+    engine.dispose()
+    _test_directory.cleanup()
+
+
 def _assert_test_database():
     actual_path = Path(engine.url.database).resolve()
     if actual_path != _test_database_path or actual_path.parent != Path(_test_directory.name).resolve():

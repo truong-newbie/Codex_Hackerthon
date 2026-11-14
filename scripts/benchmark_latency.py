@@ -23,6 +23,7 @@ os.environ["AI_MODE"] = "stub"
 
 from fastapi.testclient import TestClient
 from app.main import app
+from app.database import Base, engine
 from app.seed import seed_database
 
 def percentile(data, p):
@@ -37,6 +38,7 @@ def percentile(data, p):
     return sorted_data[f] * (c - k) + sorted_data[c] * (k - f)
 
 def run_benchmark(runs: int = 10):
+    Base.metadata.create_all(bind=engine)
     seed_database()
     client = TestClient(app)
 

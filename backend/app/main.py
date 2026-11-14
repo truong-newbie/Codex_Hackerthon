@@ -7,7 +7,8 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .config import has_live_key, settings
 from .services.ai_service import ai_service
-from .routers import auth_router, sops_router, admin_router, training_router, studio_router
+from .services.operation_service import OperationError
+from .routers import auth_router, sops_router, admin_router, training_router, studio_router, operations_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -44,6 +45,20 @@ async def validation_error(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=422,
         content={"detail": details, "code": "VALIDATION_ERROR", "request_id": request_id},
+        headers={"X-Request-ID": request_id},
+    )
+
+
+@app.exception_handler(OperationError)
+async def operation_error(request: Request, exc: OperationError):
+    request_id = request.state.request_id
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": str(exc), "code": exc.code, "request_id": request_id,
+            "operation_id": exc.operation_id,
+            "retryable": exc.code in {"OPERATION_IN_PROGRESS", "SESSION_BUSY", "STALE_SESSION"},
+        },
         headers={"X-Request-ID": request_id},
     )
 
@@ -86,6 +101,7 @@ app.include_router(auth_router.router)
 app.include_router(sops_router.router)
 app.include_router(admin_router.router)
 app.include_router(training_router.router)
+app.include_router(operations_router.router)
 app.include_router(studio_router.router)
 
 if __name__ == "__main__":

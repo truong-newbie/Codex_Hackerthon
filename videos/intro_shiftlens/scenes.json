@@ -1,0 +1,72 @@
+[
+  {
+    "kind": "hook",
+    "eyebrow": "ĐÀO TẠO NHÂN VIÊN F&B",
+    "headline": "Quy trình nằm trên giấy.\nCa làm diễn ra bằng hội thoại.",
+    "subline": "Làm sao để nhân viên sẵn sàng trước khi gặp khách thật?",
+    "voice": "Một quy trình có thể rất rõ trên giấy. Nhưng khi khách hàng phàn nàn ngay tại quầy, nhân viên phải phản ứng trong vài giây. ShiftLens giúp họ luyện tập trước tình huống đó."
+  },
+  {
+    "kind": "hero",
+    "eyebrow": "GIỚI THIỆU SHIFTLENS",
+    "headline": "Biến SOP thành\ntrải nghiệm luyện tập.",
+    "subline": "SOP  →  Mô phỏng  →  Đánh giá có bằng chứng",
+    "voice": "ShiftLens biến SOP thành bài luyện nghiệp vụ cho nhân viên F&B. AI đóng vai khách hàng; hệ thống đánh giá từ bằng chứng trong cuộc hội thoại."
+  },
+  {
+    "kind": "problem",
+    "eyebrow": "VẤN ĐỀ",
+    "headline": "Biết quy trình chưa đủ.\nCần thực hành quyết định.",
+    "subline": "Tài liệu • Tình huống thật • Phản hồi nhất quán",
+    "voice": "Đọc một tài liệu không đảm bảo xử lý tốt khi khách mất kiên nhẫn. Quản lý cũng khó quan sát mọi ca làm để huấn luyện từng người. ShiftLens nối khoảng cách giữa học và làm."
+  },
+  {
+    "kind": "manager",
+    "eyebrow": "BƯỚC 1 · QUẢN LÝ",
+    "headline": "Định nghĩa SOP\nvà tiêu chí đánh giá.",
+    "subline": "Quy trình của từng cửa hàng trở thành chuẩn cho bài tập.",
+    "voice": "Quản lý thiết lập SOP, chính sách và bộ tiêu chí chấm điểm. Mỗi phiên gắn với một phiên bản quy trình để kết quả được đánh giá đúng chuẩn."
+  },
+  {
+    "kind": "policies",
+    "eyebrow": "VÍ DỤ TRONG DỮ LIỆU DEMO",
+    "headline": "Hai quán cà phê.\nHai cách xử lý khác nhau.",
+    "subline": "Chính sách theo cửa hàng, không dùng một câu trả lời chung.",
+    "voice": "Café A yêu cầu xin phép quản lý trước khi hoàn tiền. Café B cho phép đổi món hoặc tặng voucher trong hạn mức. Một lời phàn nàn, hai cách xử lý đúng."
+  },
+  {
+    "kind": "mobile",
+    "eyebrow": "BƯỚC 2 · NHÂN VIÊN",
+    "headline": "Mở ứng dụng Android.\nBắt đầu một ca mô phỏng.",
+    "subline": "Bối cảnh, mục tiêu và chính sách hiện ngay trên màn hình.",
+    "voice": "Nhân viên chọn bài tập trên Android, đọc bối cảnh và mục tiêu. Khách AI mở lời bằng văn bản; ứng dụng có thể đọc thành tiếng."
+  },
+  {
+    "kind": "chat",
+    "eyebrow": "BƯỚC 3 · THỰC HÀNH",
+    "headline": "Khách AI phản hồi.\nNhân viên tự xử lý.",
+    "subline": "Một phiên gồm tối đa bốn lượt đối thoại.",
+    "voice": "Khách AI phản hồi theo câu trả lời. Trong tối đa bốn lượt, nhân viên cần lắng nghe, kiểm tra và xử lý đúng chính sách bằng lời của mình."
+  },
+  {
+    "kind": "evidence",
+    "eyebrow": "BƯỚC 4 · ĐÁNH GIÁ",
+    "headline": "Chấm điểm từ\ncâu nói có thật.",
+    "subline": "Exact quote được đối chiếu với transcript trước khi ghi điểm.",
+    "voice": "Hệ thống trích nguyên văn lời nhân viên. Server kiểm tra câu trích trong transcript rồi tính điểm theo rubric, kèm gợi ý rèn luyện tiếp."
+  },
+  {
+    "kind": "trust",
+    "eyebrow": "THIẾT KẾ ĐÁNG TIN CẬY",
+    "headline": "AI tạo hội thoại.\nServer giữ quyền quyết định.",
+    "subline": "Tenant isolation • SOP versioning • Live / Stub",
+    "voice": "AI tạo hội thoại và đề xuất trích dẫn. Server kiểm soát quyền theo cửa hàng, phiên bản SOP, bằng chứng và điểm số. Hệ thống có chế độ AI thật và stub để kiểm thử."
+  },
+  {
+    "kind": "end",
+    "eyebrow": "SHIFTLENS · CODEX COMMUNITY HACKATHON HANOI",
+    "headline": "Luyện tập theo quy trình.\nPhản hồi bằng bằng chứng.",
+    "subline": "Sẵn sàng cho những ca làm tự tin hơn.",
+    "voice": "Mỗi quy trình trở thành một lần thực hành; mỗi lần thực hành có phản hồi rõ ràng. ShiftLens bắt đầu từ quán cà phê, hướng tới đội ngũ tuyến đầu tự tin hơn."
+  }
+]
