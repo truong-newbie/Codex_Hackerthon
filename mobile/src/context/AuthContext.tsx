@@ -2,6 +2,13 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserInfo } from '../api/types';
 import { api } from '../api/client';
 import { DEFAULT_API_URL } from '../constants/config';
+import { storage } from '../utils/storage';
+
+const STORAGE_KEYS = {
+  SERVER_URL: '@shiftlens_server_url',
+  TOKEN: '@shiftlens_token',
+  USER: '@shiftlens_user',
+};
 
 interface AuthContextType {
   user: UserInfo | null;
@@ -22,9 +29,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [serverUrl, setServerUrlState] = useState<string>(DEFAULT_API_URL || 'http://10.0.2.2:8000');
   const [aiMode, setAiMode] = useState<string>('stub');
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const savedUrl = await storage.getItem(STORAGE_KEYS.SERVER_URL);
+        if (savedUrl) {
+          setServerUrlState(savedUrl);
+          api.setBaseUrl(savedUrl);
+        }
+        const savedToken = await storage.getItem(STORAGE_KEYS.TOKEN);
+        const savedUser = await storage.getItem(STORAGE_KEYS.USER);
+        if (savedToken && savedUser) {
+          api.setToken(savedToken);
+          setToken(savedToken);
+          setUser(JSON.parse(savedUser));
+        }
+        const health = await api.checkHealth().catch(() => null);
+        if (health) {
+          setAiMode(health.ai_mode);
+        }
+      } catch (_) {}
+    })();
+  }, []);
+
   const setServerUrl = (url: string) => {
     setServerUrlState(url);
     api.setBaseUrl(url);
+    storage.setItem(STORAGE_KEYS.SERVER_URL, url);
   };
 
   const login = async (usernameOrEmail: string, pass: string) => {
@@ -32,8 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(res.access_token);
     setUser(res.user);
     api.setToken(res.access_token);
+    await storage.setItem(STORAGE_KEYS.TOKEN, res.access_token);
+    await storage.setItem(STORAGE_KEYS.USER, JSON.stringify(res.user));
     
-    // Check health & aiMode
     try {
       const health = await api.checkHealth();
       setAiMode(health.ai_mode);
@@ -44,6 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setToken(null);
     api.setToken(null);
+    storage.removeItem(STORAGE_KEYS.TOKEN);
+    storage.removeItem(STORAGE_KEYS.USER);
   };
 
   return (
