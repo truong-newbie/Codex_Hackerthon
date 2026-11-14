@@ -1,0 +1,1602 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ShiftLens API",
+    "description": "ShiftLens API: AI Workforce Training & Simulation Platform (Codex Community Hackathon Hanoi)",
+    "version": "1.1.0"
+  },
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login",
+        "operationId": "login_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get Me",
+        "operationId": "get_me_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserInfo"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/sops": {
+      "get": {
+        "tags": [
+          "SOPs"
+        ],
+        "summary": "List Tenant Sops",
+        "operationId": "list_tenant_sops_v1_sops_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SOPDetailResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Tenant Sops V1 Sops Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/sops/{sop_id}": {
+      "get": {
+        "tags": [
+          "SOPs"
+        ],
+        "summary": "Get Sop Detail",
+        "operationId": "get_sop_detail_v1_sops__sop_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SOPDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/sops/{sop_id}/draft": {
+      "post": {
+        "tags": [
+          "Admin / Manager Studio"
+        ],
+        "summary": "Create Sop Draft",
+        "operationId": "create_sop_draft_v1_admin_sops__sop_id__draft_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sop Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SOPVersionDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/sop-versions/{version_id}/approve": {
+      "post": {
+        "tags": [
+          "Admin / Manager Studio"
+        ],
+        "summary": "Approve Sop Version",
+        "operationId": "approve_sop_version_v1_admin_sop_versions__version_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/analytics": {
+      "get": {
+        "tags": [
+          "Admin / Manager Studio"
+        ],
+        "summary": "Get Tenant Training Analytics",
+        "description": "Lấy thống kê năng lực đào tạo & bằng chứng thực hành của toàn bộ nhân viên trong cửa hàng (BR-01 Tenant Isolation).",
+        "operationId": "get_tenant_training_analytics_v1_admin_analytics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantAnalyticsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/training/sessions": {
+      "get": {
+        "tags": [
+          "Training & Simulation"
+        ],
+        "summary": "List User Sessions",
+        "operationId": "list_user_sessions_v1_training_sessions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionSummaryItem"
+                  },
+                  "type": "array",
+                  "title": "Response List User Sessions V1 Training Sessions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/training/{session_id}": {
+      "get": {
+        "tags": [
+          "Training & Simulation"
+        ],
+        "summary": "Get Training Session Detail",
+        "operationId": "get_training_session_detail_v1_training__session_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingSessionDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/training/start": {
+      "post": {
+        "tags": [
+          "Training & Simulation"
+        ],
+        "summary": "Start Training Session",
+        "operationId": "start_training_session_v1_training_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainingStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/training/{session_id}/turn": {
+      "post": {
+        "tags": [
+          "Training & Simulation"
+        ],
+        "summary": "Submit Training Turn",
+        "operationId": "submit_training_turn_v1_training__session_id__turn_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainingTurnRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingTurnResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/training/{session_id}/evaluate": {
+      "post": {
+        "tags": [
+          "Training & Simulation"
+        ],
+        "summary": "Evaluate Training Session",
+        "operationId": "evaluate_training_session_v1_training__session_id__evaluate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinalResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/studio": {
+      "get": {
+        "tags": [
+          "Manager Studio Web UI"
+        ],
+        "summary": "Manager Studio Ui",
+        "description": "Giao diện No-Code Manager Studio tích hợp sẵn phục vụ cấu hình SOP v2 và xem báo cáo năng lực nhân viên.",
+        "operationId": "manager_studio_ui_studio_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApproveResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "active_version_id": {
+            "type": "string",
+            "title": "Active Version Id"
+          },
+          "version_no": {
+            "type": "integer",
+            "title": "Version No"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "active_version_id",
+          "version_no"
+        ],
+        "title": "ApproveResponse"
+      },
+      "CreateDraftRequest": {
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepItem"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Steps"
+          },
+          "rubric": {
+            "items": {
+              "$ref": "#/components/schemas/RubricItem"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Rubric"
+          }
+        },
+        "type": "object",
+        "required": [
+          "steps",
+          "rubric"
+        ],
+        "title": "CreateDraftRequest"
+      },
+      "EvaluationEvidence": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "weight": {
+            "type": "integer",
+            "title": "Weight"
+          },
+          "critical": {
+            "type": "boolean",
+            "title": "Critical"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "exact_quote": {
+            "type": "string",
+            "title": "Exact Quote"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "quote_verified": {
+            "type": "boolean",
+            "title": "Quote Verified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "label",
+          "weight",
+          "critical",
+          "passed",
+          "exact_quote",
+          "explanation",
+          "quote_verified"
+        ],
+        "title": "EvaluationEvidence"
+      },
+      "FinalResultResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "sop_version_id": {
+            "type": "string",
+            "title": "Sop Version Id"
+          },
+          "sop_version_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sop Version No"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "critical_failure": {
+            "type": "boolean",
+            "title": "Critical Failure"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationEvidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "coaching_tip": {
+            "type": "string",
+            "title": "Coaching Tip"
+          },
+          "ai_mode": {
+            "type": "string",
+            "title": "Ai Mode"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "disclaimer": {
+            "type": "string",
+            "title": "Disclaimer",
+            "default": "Kết quả mô phỏng dùng cho mục đích đào tạo và rèn luyện kỹ năng, không thay thế cho quyết định đánh giá nhân sự chính thức."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "sop_version_id",
+          "score",
+          "passed",
+          "critical_failure",
+          "evidence",
+          "coaching_tip",
+          "ai_mode"
+        ],
+        "title": "FinalResultResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginRequest": {
+        "properties": {
+          "username_or_email": {
+            "type": "string",
+            "title": "Username Or Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username_or_email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "ManagerSessionRecord": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "employee_id": {
+            "type": "string",
+            "title": "Employee Id"
+          },
+          "employee_username": {
+            "type": "string",
+            "title": "Employee Username"
+          },
+          "employee_name": {
+            "type": "string",
+            "title": "Employee Name"
+          },
+          "sop_id": {
+            "type": "string",
+            "title": "Sop Id"
+          },
+          "sop_title": {
+            "type": "string",
+            "title": "Sop Title"
+          },
+          "sop_version_id": {
+            "type": "string",
+            "title": "Sop Version Id"
+          },
+          "sop_version_no": {
+            "type": "integer",
+            "title": "Sop Version No"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          },
+          "turns_count": {
+            "type": "integer",
+            "title": "Turns Count"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passed"
+          },
+          "critical_failure": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical Failure"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationEvidence"
+            },
+            "type": "array",
+            "title": "Evidence",
+            "default": []
+          },
+          "coaching_tip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coaching Tip"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "employee_id",
+          "employee_username",
+          "employee_name",
+          "sop_id",
+          "sop_title",
+          "sop_version_id",
+          "sop_version_no",
+          "completed",
+          "turns_count",
+          "created_at"
+        ],
+        "title": "ManagerSessionRecord"
+      },
+      "ModuleDraft": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "learning_objective": {
+            "type": "string",
+            "title": "Learning Objective"
+          },
+          "situation": {
+            "type": "string",
+            "title": "Situation"
+          },
+          "opening_message": {
+            "type": "string",
+            "title": "Opening Message"
+          },
+          "criteria": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Criteria"
+          },
+          "next_practice_hint": {
+            "type": "string",
+            "title": "Next Practice Hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "learning_objective",
+          "situation",
+          "opening_message",
+          "criteria",
+          "next_practice_hint"
+        ],
+        "title": "ModuleDraft"
+      },
+      "RubricItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "weight": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Weight"
+          },
+          "critical": {
+            "type": "boolean",
+            "title": "Critical",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "weight"
+        ],
+        "title": "RubricItem"
+      },
+      "SOPDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "active_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SOPVersionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/SOPVersionDetail"
+            },
+            "type": "array",
+            "title": "Versions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "title"
+        ],
+        "title": "SOPDetailResponse"
+      },
+      "SOPVersionDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sop_id": {
+            "type": "string",
+            "title": "Sop Id"
+          },
+          "version_no": {
+            "type": "integer",
+            "title": "Version No"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepItem"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "rubric": {
+            "items": {
+              "$ref": "#/components/schemas/RubricItem"
+            },
+            "type": "array",
+            "title": "Rubric"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sop_id",
+          "version_no",
+          "status",
+          "steps",
+          "rubric",
+          "created_at"
+        ],
+        "title": "SOPVersionDetail"
+      },
+      "SessionSummaryItem": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "sop_id": {
+            "type": "string",
+            "title": "Sop Id"
+          },
+          "sop_title": {
+            "type": "string",
+            "title": "Sop Title"
+          },
+          "sop_version_id": {
+            "type": "string",
+            "title": "Sop Version Id"
+          },
+          "sop_version_no": {
+            "type": "integer",
+            "title": "Sop Version No"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          },
+          "turns_count": {
+            "type": "integer",
+            "title": "Turns Count"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passed"
+          },
+          "critical_failure": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical Failure"
+          },
+          "ai_mode": {
+            "type": "string",
+            "title": "Ai Mode"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "sop_id",
+          "sop_title",
+          "sop_version_id",
+          "sop_version_no",
+          "completed",
+          "turns_count",
+          "ai_mode",
+          "created_at"
+        ],
+        "title": "SessionSummaryItem"
+      },
+      "StepItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "instruction": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Instruction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "instruction"
+        ],
+        "title": "StepItem"
+      },
+      "TenantAnalyticsResponse": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "tenant_name": {
+            "type": "string",
+            "title": "Tenant Name"
+          },
+          "total_sessions": {
+            "type": "integer",
+            "title": "Total Sessions"
+          },
+          "completed_sessions": {
+            "type": "integer",
+            "title": "Completed Sessions"
+          },
+          "pass_rate": {
+            "type": "number",
+            "title": "Pass Rate"
+          },
+          "average_score": {
+            "type": "number",
+            "title": "Average Score"
+          },
+          "critical_failure_count": {
+            "type": "integer",
+            "title": "Critical Failure Count"
+          },
+          "recent_sessions": {
+            "items": {
+              "$ref": "#/components/schemas/ManagerSessionRecord"
+            },
+            "type": "array",
+            "title": "Recent Sessions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "tenant_name",
+          "total_sessions",
+          "completed_sessions",
+          "pass_rate",
+          "average_score",
+          "critical_failure_count"
+        ],
+        "title": "TenantAnalyticsResponse"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "user"
+        ],
+        "title": "TokenResponse"
+      },
+      "TrainingSessionDetailResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "sop_id": {
+            "type": "string",
+            "title": "Sop Id"
+          },
+          "sop_title": {
+            "type": "string",
+            "title": "Sop Title"
+          },
+          "sop_version_id": {
+            "type": "string",
+            "title": "Sop Version Id"
+          },
+          "sop_version_no": {
+            "type": "integer",
+            "title": "Sop Version No"
+          },
+          "module": {
+            "$ref": "#/components/schemas/ModuleDraft"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/TurnDetail"
+            },
+            "type": "array",
+            "title": "Turns"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FinalResultResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ai_mode": {
+            "type": "string",
+            "title": "Ai Mode"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "tenant_id",
+          "sop_id",
+          "sop_title",
+          "sop_version_id",
+          "sop_version_no",
+          "module",
+          "completed",
+          "turns",
+          "ai_mode",
+          "created_at"
+        ],
+        "title": "TrainingSessionDetailResponse"
+      },
+      "TrainingSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "sop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sop Id"
+          },
+          "sop_version_id": {
+            "type": "string",
+            "title": "Sop Version Id"
+          },
+          "sop_version_no": {
+            "type": "integer",
+            "title": "Sop Version No",
+            "default": 1
+          },
+          "sop_title": {
+            "type": "string",
+            "title": "Sop Title"
+          },
+          "module": {
+            "$ref": "#/components/schemas/ModuleDraft"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          },
+          "turns_count": {
+            "type": "integer",
+            "title": "Turns Count"
+          },
+          "ai_mode": {
+            "type": "string",
+            "title": "Ai Mode"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "tenant_id",
+          "sop_version_id",
+          "sop_title",
+          "module",
+          "completed",
+          "turns_count",
+          "ai_mode"
+        ],
+        "title": "TrainingSessionResponse"
+      },
+      "TrainingStartRequest": {
+        "properties": {
+          "sop_id": {
+            "type": "string",
+            "title": "Sop Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sop_id"
+        ],
+        "title": "TrainingStartRequest"
+      },
+      "TrainingTurnRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 2,
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "TrainingTurnRequest"
+      },
+      "TrainingTurnResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "turn_no": {
+            "type": "integer",
+            "title": "Turn No"
+          },
+          "employee_text": {
+            "type": "string",
+            "title": "Employee Text"
+          },
+          "customer_text": {
+            "type": "string",
+            "title": "Customer Text"
+          },
+          "remaining_turns": {
+            "type": "integer",
+            "title": "Remaining Turns"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          },
+          "ai_mode": {
+            "type": "string",
+            "title": "Ai Mode"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "turn_no",
+          "employee_text",
+          "customer_text",
+          "remaining_turns",
+          "completed",
+          "ai_mode"
+        ],
+        "title": "TrainingTurnResponse"
+      },
+      "TurnDetail": {
+        "properties": {
+          "turn_no": {
+            "type": "integer",
+            "title": "Turn No"
+          },
+          "employee_text": {
+            "type": "string",
+            "title": "Employee Text"
+          },
+          "customer_text": {
+            "type": "string",
+            "title": "Customer Text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "turn_no",
+          "employee_text",
+          "customer_text",
+          "created_at"
+        ],
+        "title": "TurnDetail"
+      },
+      "UserInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "tenant_name": {
+            "type": "string",
+            "title": "Tenant Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "email",
+          "role",
+          "tenant_id",
+          "tenant_name"
+        ],
+        "title": "UserInfo"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

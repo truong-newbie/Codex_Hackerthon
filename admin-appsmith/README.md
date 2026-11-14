@@ -64,3 +64,17 @@ Thư mục này hướng dẫn kết nối **Appsmith Community Edition (CE)** v
   - Phiên bản mới được đánh dấu `approved` và trở thành `active_version_id`.
   - Phiên bản cũ được chuyển sang `superseded` (bất biến, không thể sửa đổi).
   - Các buổi luyện tập mới của nhân viên sẽ tự động nhận phiên bản này.
+
+---
+
+### 2.5. Báo cáo Năng lực Nhân viên & Bằng chứng (Store Competency Analytics)
+- **Method**: `GET`
+- **URL**: `{{appsmith.store.API_URL || 'http://localhost:8000'}}/v1/admin/analytics`
+- **Headers**:
+  - `Authorization`: `Bearer {{appsmith.store.TOKEN}}`
+- **Output**: Trả về `pass_rate`, `average_score`, `critical_failure_count` và `recent_sessions` kèm `exact_quote` của từng nhân viên trong cửa hàng.
+
+---
+
+## 3. Import 1-Click OpenAPI 3.0 Spec
+File [openapi.json](file:///d:/Thu_muc_C/Codex_Hackerthon/admin-appsmith/openapi.json) chứa đầy đủ 14 đường dẫn REST API chuẩn của hệ thống ShiftLens. Bạn có thể Import trực tiếp file này vào **Appsmith Datasource** hoặc **Postman** để tạo tự động toàn bộ các queries.
