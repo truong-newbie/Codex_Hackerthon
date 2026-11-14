@@ -19,6 +19,7 @@ export const SopListScreen: React.FC<SopListScreenProps> = ({ onStartTraining, o
   const [analytics, setAnalytics] = useState<TenantAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [upgradingId, setUpgradingId] = useState<string | null>(null);
   const [openingSessionId, setOpeningSessionId] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -59,6 +60,37 @@ export const SopListScreen: React.FC<SopListScreenProps> = ({ onStartTraining, o
       await onStartTraining(sop.id, sop.title);
     } finally {
       setStartingId(null);
+    }
+  };
+
+  const handleUpgradeSopV2 = async (sop: SOPDetailResponse) => {
+    setUpgradingId(sop.id);
+    try {
+      const nextVer = (sop.active_version?.version_no || 1) + 1;
+      const draft = await api.createSopDraft(
+        sop.id,
+        [
+          { id: 'S1', instruction: 'Lắng nghe với thái độ cầu thị, xin lỗi khách và mời khách ngồi nghỉ tại quầy.' },
+          { id: 'S2', instruction: 'Kiểm tra hóa đơn và xác nhận lỗi pha chế của ly đồ uống.' },
+          { id: 'S3', instruction: `[CẬP NHẬT v${nextVer}] Chủ động pha lại ly mới ngay lập tức VÀ tặng kèm 01 bánh quy bơ miễn phí cùng voucher 50.000đ.` },
+        ],
+        [
+          { id: 'C1', label: 'Lắng nghe & Xin lỗi khách hàng', weight: 20, critical: false },
+          { id: 'C2', label: 'Kiểm tra hóa đơn & Xác minh lỗi', weight: 30, critical: false },
+          { id: 'C3', label: `Chính sách linh hoạt v${nextVer}: Đổi ly + tặng bánh quy/voucher`, weight: 35, critical: true },
+          { id: 'C4', label: 'Xác nhận sự hài lòng & Cảm ơn', weight: 15, critical: false },
+        ]
+      );
+      await api.approveSopVersion(draft.id);
+      await fetchData();
+      Alert.alert(
+        'Đã nâng cấp SOP thành công!',
+        `Đã tạo và phê duyệt phiên bản v${draft.version_no} (${draft.id}). Các phiên mới sẽ ghim v${draft.version_no}, trong khi phiên cũ vẫn giữ nguyên phiên bản ban đầu.`
+      );
+    } catch (err: any) {
+      Alert.alert('Lỗi nâng cấp SOP', err.message);
+    } finally {
+      setUpgradingId(null);
     }
   };
 
@@ -185,6 +217,22 @@ export const SopListScreen: React.FC<SopListScreenProps> = ({ onStartTraining, o
                   </Text>
                 )}
               </TouchableOpacity>
+
+              {user?.role === 'manager' && (
+                <TouchableOpacity
+                  style={[styles.upgradeBtn, upgradingId === item.id && styles.disabledBtn]}
+                  onPress={() => handleUpgradeSopV2(item)}
+                  disabled={upgradingId === item.id}
+                >
+                  {upgradingId === item.id ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.upgradeBtnText}>
+                      ⚡ Quản lý: Tạo & Duyệt nhanh SOP v{(item.active_version?.version_no || 1) + 1} (Thêm tặng Bánh quy)
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           ))
         )}
@@ -405,6 +453,18 @@ const styles = StyleSheet.create({
   startBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  upgradeBtn: {
+    backgroundColor: '#059669',
+    paddingVertical: 11,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  upgradeBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '700',
   },
   sectionHeaderRow: {

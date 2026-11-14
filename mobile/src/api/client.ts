@@ -1,11 +1,13 @@
 import { 
   TokenResponse, SOPDetailResponse, TrainingSessionResponse, 
   TrainingTurnResponse, FinalResultResponse, HealthResponse,
-  SessionSummaryItem, TrainingSessionDetailResponse, TenantAnalyticsResponse
+  SessionSummaryItem, TrainingSessionDetailResponse, TenantAnalyticsResponse,
+  StepItem, RubricItem, SOPVersionDetail
 } from './types';
+import { DEFAULT_API_URL } from '../constants/config';
 
 class ApiClient {
-  private baseUrl: string = 'http://10.0.2.2:8000';
+  private baseUrl: string = (DEFAULT_API_URL || 'http://10.0.2.2:8000').trim().replace(/\/+$/, '');
   private token: string | null = null;
 
   setBaseUrl(url: string) {
@@ -87,6 +89,19 @@ class ApiClient {
 
   async getAdminAnalytics(): Promise<TenantAnalyticsResponse> {
     return this.request<TenantAnalyticsResponse>('/v1/admin/analytics');
+  }
+
+  async createSopDraft(sopId: string, steps: StepItem[], rubric: RubricItem[]): Promise<SOPVersionDetail> {
+    return this.request<SOPVersionDetail>(`/v1/admin/sops/${sopId}/draft`, {
+      method: 'POST',
+      body: JSON.stringify({ steps, rubric }),
+    });
+  }
+
+  async approveSopVersion(versionId: string): Promise<SOPVersionDetail> {
+    return this.request<SOPVersionDetail>(`/v1/admin/sop-versions/${versionId}/approve`, {
+      method: 'POST',
+    });
   }
 
   async getSessions(): Promise<SessionSummaryItem[]> {

@@ -39,10 +39,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (async () => {
       try {
         const savedUrl = await storage.getItem(STORAGE_KEYS.SERVER_URL);
-        if (savedUrl) {
-          setServerUrlState(savedUrl);
-          api.setBaseUrl(savedUrl);
-        }
+        const initialUrl = savedUrl || DEFAULT_API_URL || 'http://10.0.2.2:8000';
+        setServerUrlState(initialUrl);
+        api.setBaseUrl(initialUrl);
         const savedToken = await storage.getItem(STORAGE_KEYS.TOKEN);
         const savedUser = await storage.getItem(STORAGE_KEYS.USER);
         const savedSessionId = await storage.getItem(STORAGE_KEYS.ACTIVE_SESSION_ID);

@@ -1,22 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
   ActivityIndicator, Alert, ScrollView 
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api/client';
 
 export const LoginScreen: React.FC = () => {
-  const { login, serverUrl, setServerUrl } = useAuth();
+  const { login, serverUrl, setServerUrl, setAiMode } = useAuth();
   const [username, setUsername] = useState('emp_a');
   const [password, setPassword] = useState('ShiftLens@2026');
   const [loading, setLoading] = useState(false);
   const [editingUrl, setEditingUrl] = useState(serverUrl);
+  const [healthStatus, setHealthStatus] = useState<string | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState(false);
+
+  useEffect(() => {
+    setEditingUrl(serverUrl);
+  }, [serverUrl]);
+
+  const applyUrlIfNeeded = () => {
+    const cleanUrl = editingUrl.trim();
+    if (cleanUrl && cleanUrl !== serverUrl) {
+      setServerUrl(cleanUrl);
+    }
+  };
+
+  const handleCheckConnection = async () => {
+    const cleanUrl = editingUrl.trim();
+    if (!cleanUrl) {
+      Alert.alert('Lỗi', 'Vui lòng nhập Backend API URL');
+      return;
+    }
+    setServerUrl(cleanUrl);
+    setCheckingHealth(true);
+    setHealthStatus(null);
+    try {
+      const health = await api.checkHealth();
+      setAiMode(health.ai_mode);
+      const modeLabel = health.ai_mode === 'live' ? '🟢 AI LIVE' : '🟠 AI STUB';
+      setHealthStatus(`✅ Đã kết nối (${modeLabel} • v${health.version})`);
+    } catch (err: any) {
+      setHealthStatus(`❌ ${err.message || 'Không thể kết nối máy chủ'}`);
+    } finally {
+      setCheckingHealth(false);
+    }
+  };
 
   const handleLogin = async (userToLogin = username, passToLogin = password) => {
     if (!userToLogin.trim() || !passToLogin.trim()) {
       Alert.alert('Lỗi', 'Vui lòng nhập tên đăng nhập và mật khẩu');
       return;
     }
+    applyUrlIfNeeded();
     setLoading(true);
     try {
       await login(userToLogin, passToLogin);
@@ -115,24 +151,30 @@ export const LoginScreen: React.FC = () => {
         </View>
 
         <View style={styles.serverConfig}>
-          <Text style={styles.serverConfigLabel}>Backend API URL:</Text>
+          <Text style={styles.serverConfigLabel}>Backend API URL (Emulator: 10.0.2.2 | Máy thật: IP LAN):</Text>
           <View style={styles.serverConfigRow}>
             <TextInput
               style={[styles.input, { flex: 1, marginBottom: 0 }]}
               value={editingUrl}
               onChangeText={setEditingUrl}
               autoCapitalize="none"
+              placeholder="http://192.168.1.xxx:8000"
             />
             <TouchableOpacity 
               style={styles.applyButton}
-              onPress={() => {
-                setServerUrl(editingUrl);
-                Alert.alert('Thành công', `Đã lưu URL: ${editingUrl}`);
-              }}
+              onPress={handleCheckConnection}
+              disabled={checkingHealth}
             >
-              <Text style={styles.applyButtonText}>Lưu</Text>
+              {checkingHealth ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.applyButtonText}>Lưu & Test</Text>
+              )}
             </TouchableOpacity>
           </View>
+          {healthStatus && (
+            <Text style={styles.healthStatusText}>{healthStatus}</Text>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -273,5 +315,11 @@ const styles = StyleSheet.create({
     color: '#F8FAFC',
     fontWeight: '600',
     fontSize: 13,
+  },
+  healthStatusText: {
+    color: '#38BDF8',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 8,
   },
 });
