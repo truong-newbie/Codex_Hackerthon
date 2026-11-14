@@ -149,3 +149,33 @@ export interface HealthResponse {
   gemini_model?: string;
   version: string;
 }
+
+export interface ManagerSessionRecord {
+  session_id: string;
+  employee_id: string;
+  employee_username: string;
+  employee_name: string;
+  sop_id: string;
+  sop_title: string;
+  sop_version_id: string;
+  sop_version_no: number;
+  completed: boolean;
+  turns_count: number;
+  score?: number | null;
+  passed?: boolean | null;
+  critical_failure?: boolean | null;
+  evidence: EvaluationEvidence[];
+  coaching_tip?: string | null;
+  created_at: string;
+}
+
+export interface TenantAnalyticsResponse {
+  tenant_id: string;
+  tenant_name: string;
+  total_sessions: number;
+  completed_sessions: number;
+  pass_rate: number;
+  average_score: number;
+  critical_failure_count: number;
+  recent_sessions: ManagerSessionRecord[];
+}

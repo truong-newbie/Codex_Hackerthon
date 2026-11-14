@@ -83,17 +83,35 @@ export const LoginScreen: React.FC = () => {
             style={[styles.quickButton, { borderColor: '#3B82F6' }]} 
             onPress={() => handleQuickSelect('emp_a')}
           >
-            <Text style={styles.quickButtonTitle}>☕ Café A (Nhân viên)</Text>
-            <Text style={styles.quickButtonSub}>emp_a (Chính sách nghiêm ngặt)</Text>
+            <Text style={styles.quickButtonTitle}>☕ Café A (Nhân viên: emp_a)</Text>
+            <Text style={styles.quickButtonSub}>Chính sách nghiêm ngặt (Không tự hoàn tiền)</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.quickButton, { borderColor: '#10B981' }]} 
             onPress={() => handleQuickSelect('emp_b')}
           >
-            <Text style={styles.quickButtonTitle}>🌿 Café B (Nhân viên)</Text>
-            <Text style={styles.quickButtonSub}>emp_b (Linh hoạt đổi món/voucher)</Text>
+            <Text style={styles.quickButtonTitle}>🌿 Café B (Nhân viên: emp_b)</Text>
+            <Text style={styles.quickButtonSub}>Chính sách linh hoạt (Đổi món / Voucher &lt; 50k)</Text>
           </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity 
+              style={[styles.quickButton, { flex: 1, borderColor: '#F59E0B' }]} 
+              onPress={() => handleQuickSelect('manager_a')}
+            >
+              <Text style={styles.quickButtonTitle}>👔 Quản lý Café A</Text>
+              <Text style={styles.quickButtonSub}>manager_a (Buyer View)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.quickButton, { flex: 1, borderColor: '#8B5CF6' }]} 
+              onPress={() => handleQuickSelect('manager_b')}
+            >
+              <Text style={styles.quickButtonTitle}>👔 Quản lý Café B</Text>
+              <Text style={styles.quickButtonSub}>manager_b (Buyer View)</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.serverConfig}>

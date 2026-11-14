@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   SERVER_URL: '@shiftlens_server_url',
   TOKEN: '@shiftlens_token',
   USER: '@shiftlens_user',
+  ACTIVE_SESSION_ID: '@shiftlens_active_session_id',
 };
 
 interface AuthContextType {
@@ -19,6 +20,9 @@ interface AuthContextType {
   logout: () => void;
   aiMode: string;
   setAiMode: (mode: string) => void;
+  isHydrating: boolean;
+  activeSessionId: string | null;
+  setActiveSessionId: (sessionId: string | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [serverUrl, setServerUrlState] = useState<string>(DEFAULT_API_URL || 'http://10.0.2.2:8000');
   const [aiMode, setAiMode] = useState<string>('stub');
+  const [isHydrating, setIsHydrating] = useState<boolean>(true);
+  const [activeSessionId, setActiveSessionIdState] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -39,16 +45,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         const savedToken = await storage.getItem(STORAGE_KEYS.TOKEN);
         const savedUser = await storage.getItem(STORAGE_KEYS.USER);
+        const savedSessionId = await storage.getItem(STORAGE_KEYS.ACTIVE_SESSION_ID);
         if (savedToken && savedUser) {
           api.setToken(savedToken);
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
         }
+        if (savedSessionId) {
+          setActiveSessionIdState(savedSessionId);
+        }
         const health = await api.checkHealth().catch(() => null);
         if (health) {
           setAiMode(health.ai_mode);
         }
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        setIsHydrating(false);
+      }
     })();
   }, []);
 
@@ -56,6 +69,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setServerUrlState(url);
     api.setBaseUrl(url);
     storage.setItem(STORAGE_KEYS.SERVER_URL, url);
+  };
+
+  const setActiveSessionId = async (sessionId: string | null) => {
+    setActiveSessionIdState(sessionId);
+    if (sessionId) {
+      await storage.setItem(STORAGE_KEYS.ACTIVE_SESSION_ID, sessionId);
+    } else {
+      await storage.removeItem(STORAGE_KEYS.ACTIVE_SESSION_ID);
+    }
   };
 
   const login = async (usernameOrEmail: string, pass: string) => {
@@ -75,9 +97,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     setToken(null);
+    setActiveSessionIdState(null);
     api.setToken(null);
     storage.removeItem(STORAGE_KEYS.TOKEN);
     storage.removeItem(STORAGE_KEYS.USER);
+    storage.removeItem(STORAGE_KEYS.ACTIVE_SESSION_ID);
   };
 
   return (
@@ -89,7 +113,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       logout,
       aiMode,
-      setAiMode
+      setAiMode,
+      isHydrating,
+      activeSessionId,
+      setActiveSessionId,
     }}>
       {children}
     </AuthContext.Provider>

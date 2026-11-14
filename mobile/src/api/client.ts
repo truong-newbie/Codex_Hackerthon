@@ -1,7 +1,7 @@
 import { 
   TokenResponse, SOPDetailResponse, TrainingSessionResponse, 
   TrainingTurnResponse, FinalResultResponse, HealthResponse,
-  SessionSummaryItem, TrainingSessionDetailResponse
+  SessionSummaryItem, TrainingSessionDetailResponse, TenantAnalyticsResponse
 } from './types';
 
 class ApiClient {
@@ -83,6 +83,10 @@ class ApiClient {
 
   async getSops(): Promise<SOPDetailResponse[]> {
     return this.request<SOPDetailResponse[]>('/v1/sops');
+  }
+
+  async getAdminAnalytics(): Promise<TenantAnalyticsResponse> {
+    return this.request<TenantAnalyticsResponse>('/v1/admin/analytics');
   }
 
   async getSessions(): Promise<SessionSummaryItem[]> {

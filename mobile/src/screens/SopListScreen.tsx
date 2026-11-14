@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
-import { SOPDetailResponse, SessionSummaryItem } from '../api/types';
+import { SOPDetailResponse, SessionSummaryItem, TenantAnalyticsResponse } from '../api/types';
 
 interface SopListScreenProps {
   onStartTraining: (sopId: string, sopTitle: string) => void;
@@ -16,6 +16,7 @@ export const SopListScreen: React.FC<SopListScreenProps> = ({ onStartTraining, o
   const { user, logout, aiMode, setAiMode } = useAuth();
   const [sops, setSops] = useState<SOPDetailResponse[]>([]);
   const [sessions, setSessions] = useState<SessionSummaryItem[]>([]);
+  const [analytics, setAnalytics] = useState<TenantAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [startingId, setStartingId] = useState<string | null>(null);
   const [openingSessionId, setOpeningSessionId] = useState<string | null>(null);
@@ -23,13 +24,17 @@ export const SopListScreen: React.FC<SopListScreenProps> = ({ onStartTraining, o
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sopsData, sessionsData, healthData] = await Promise.all([
+      const [sopsData, sessionsData, healthData, analyticsData] = await Promise.all([
         api.getSops(),
         api.getSessions(),
         api.checkHealth().catch(() => null),
+        user?.role === 'manager' ? api.getAdminAnalytics().catch(() => null) : Promise.resolve(null),
       ]);
       setSops(sopsData);
       setSessions(sessionsData);
+      if (analyticsData) {
+        setAnalytics(analyticsData);
+      }
       if (healthData) {
         setAiMode(healthData.ai_mode);
       }
@@ -99,6 +104,27 @@ export const SopListScreen: React.FC<SopListScreenProps> = ({ onStartTraining, o
             Chọn quy trình chuẩn (SOP) bên dưới để thực hành với khách hàng AI. Mỗi phiên học sẽ ghim cố định phiên bản SOP tại thời điểm bắt đầu (Session Pinning).
           </Text>
         </View>
+
+        {user?.role === 'manager' && analytics && (
+          <View style={styles.sopCard}>
+            <Text style={[styles.sopTitle, { color: '#38BDF8', marginBottom: 8 }]}>
+              📊 Thống kê Năng lực Cửa hàng (Manager Buyer View)
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={styles.sopMetaText}>Tổng phiên: <Text style={{ color: '#F8FAFC', fontWeight: '700' }}>{analytics.total_sessions}</Text></Text>
+              <Text style={styles.sopMetaText}>Tỷ lệ Đạt: <Text style={{ color: '#10B981', fontWeight: '700' }}>{analytics.pass_rate}%</Text></Text>
+              <Text style={styles.sopMetaText}>Điểm TB: <Text style={{ color: '#38BDF8', fontWeight: '700' }}>{analytics.average_score}</Text></Text>
+              <Text style={styles.sopMetaText}>Lỗi Critical: <Text style={{ color: '#EF4444', fontWeight: '700' }}>{analytics.critical_failure_count}</Text></Text>
+            </View>
+            {analytics.recent_sessions.slice(0, 3).map((rec) => (
+              <View key={rec.session_id} style={{ backgroundColor: '#0F172A', padding: 8, borderRadius: 6, marginTop: 4 }}>
+                <Text style={{ color: '#E2E8F0', fontSize: 12, fontWeight: '600' }}>
+                  👤 {rec.employee_name} • 📌 v{rec.sop_version_no} • {rec.completed ? `${rec.score}/100đ (${rec.passed ? 'ĐẠT' : 'TRƯỢT'})` : `Đang học (${rec.turns_count}/4)`}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <Text style={styles.listHeading}>1. Quy trình SOP đang kích hoạt (Approved Active):</Text>
 
