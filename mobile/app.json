@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "ShiftLens",
+    "slug": "shiftlens-app",
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.shiftlens.training",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
