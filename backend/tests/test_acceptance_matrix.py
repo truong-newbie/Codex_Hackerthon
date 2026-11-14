@@ -228,3 +228,46 @@ def test_manager_studio_web_ui_endpoint(client):
     res = client.get("/studio")
     assert res.status_code == 200
     assert "ShiftLens — Manager Studio" in res.text
+
+def test_employee_cannot_access_manager_analytics(client, auth_headers_emp_a):
+    res = client.get("/v1/admin/analytics", headers=auth_headers_emp_a)
+    assert res.status_code == 403
+
+def test_manager_analytics_tenant_isolation_and_kpis(
+    client, auth_headers_emp_a, auth_headers_emp_b, auth_headers_manager_a
+):
+    # Employee A completes a passing session
+    s_a = client.post("/v1/training/start", headers=auth_headers_emp_a, json={"sop_id": "sop-complaint-a"}).json()
+    client.post(
+        f"/v1/training/{s_a['session_id']}/turn",
+        headers=auth_headers_emp_a,
+        json={"message": "Dạ em rất xin lỗi anh, em xin phép kiểm tra hóa đơn rồi đổi ly mới và báo quản lý hỗ trợ anh ngay ạ."}
+    )
+    client.post(f"/v1/training/{s_a['session_id']}/evaluate", headers=auth_headers_emp_a)
+
+    # Employee B starts a session in Café B
+    s_b = client.post("/v1/training/start", headers=auth_headers_emp_b, json={"sop_id": "sop-complaint-b"}).json()
+
+    # Manager A fetches analytics -> must see Café A session and NEVER see Café B session
+    ana_res = client.get("/v1/admin/analytics", headers=auth_headers_manager_a)
+    assert ana_res.status_code == 200
+    ana = ana_res.json()
+    assert ana["tenant_id"] == "tenant-cafe-a"
+    assert ana["total_sessions"] >= 1
+    assert ana["completed_sessions"] >= 1
+    session_ids = [r["session_id"] for r in ana["recent_sessions"]]
+    assert s_a["session_id"] in session_ids
+    assert s_b["session_id"] not in session_ids
+
+def test_adaptive_sop_v2_customer_probing(client, auth_headers_emp_b):
+    # In previous test, Café B's active SOP v2 has "bánh quy" in S3.
+    s_res = client.post("/v1/training/start", headers=auth_headers_emp_b, json={"sop_id": "sop-complaint-b"}).json()
+    # Employee only apologizes without mentioning cookie
+    t_res = client.post(
+        f"/v1/training/{s_res['session_id']}/turn",
+        headers=auth_headers_emp_b,
+        json={"message": "Dạ em rất xin lỗi anh về sự cố này ạ."}
+    )
+    assert t_res.status_code == 200
+    assert "bánh quy" in t_res.json()["customer_text"].lower()
+
