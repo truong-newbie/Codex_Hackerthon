@@ -16,11 +16,24 @@ node_modules/
 dist/
 npm-debug.*
 *.jks
+*.keystore
+!mobile/android/app/debug.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
 *.orig.*
+
+# Android Studio & Gradle build outputs (keep mobile/android source & wrapper tracked)
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/android/.idea/
+mobile/android/*.iml
+mobile/android/app/*.iml
+*.apk
+*.aab
 
 # Environment variables & secrets
 .env

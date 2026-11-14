@@ -12,6 +12,9 @@
         "backgroundColor": "#0F172A"
       }
     },
+    "plugins": [
+      "./plugins/withCleartextTraffic"
+    ],
     "web": {
       "bundler": "metro"
     }
