@@ -15,13 +15,21 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ result, onDone }) =>
     <SafeAreaView style={styles.container}>
       {/* Top Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Báo Cáo Đánh Giá Kỹ Năng</Text>
+        <Text style={styles.headerTitle}>Báo Cáo Đánh Giá Năng Lực (Rubric 100đ)</Text>
+      </View>
+
+      {/* Technical Proof Banner */}
+      <View style={styles.telemetryBar}>
+        <Text style={styles.telemetryText}>
+          {result.ai_mode === 'live' ? '🟢 AI: LIVE' : '🟠 AI: STUB'}  |  📌 Pinned SOP: v{result.sop_version_no || 1} ({result.sop_version_id})
+          {result.latency_ms !== undefined ? `  |  ⚡ ${result.latency_ms}ms` : ''}
+        </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Score Overview Card */}
         <View style={styles.scoreCard}>
-          <Text style={styles.scoreLabel}>TỔNG ĐIỂM NĂNG LỰC</Text>
+          <Text style={styles.scoreLabel}>TỔNG ĐIỂM NĂNG LỰC (DETERMINISTIC SCORING)</Text>
           <View style={styles.scoreRow}>
             <Text style={[styles.scoreNumber, result.passed ? styles.scoreGreen : styles.scoreRed]}>
               {result.score}
@@ -31,14 +39,14 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ result, onDone }) =>
 
           <View style={[styles.outcomeBadge, result.passed ? styles.passedBadge : styles.failedBadge]}>
             <Text style={styles.outcomeBadgeText}>
-              {result.passed ? '✓ ĐẠT YÊU CẦU' : '✗ CHƯA ĐẠT'}
+              {result.passed ? '✓ ĐẠT YÊU CẦU' : '✗ CHƯA ĐẠT YÊU CẦU'}
             </Text>
           </View>
 
           {result.critical_failure && (
             <View style={styles.criticalAlert}>
               <Text style={styles.criticalAlertText}>
-                ⚠️ CẢNH BÁO: Không vượt qua bài thi do vi phạm Tiêu chí Chí tử (Critical Rule)!
+                ⚠️ CẢNH BÁO VI PHẠM CHÍ TỬ (CRITICAL FAILURE): Không vượt qua đánh giá do vi phạm tiêu chí bắt buộc trong chính sách SOP (BR-09 / FR-13)!
               </Text>
             </View>
           )}
@@ -46,24 +54,24 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ result, onDone }) =>
 
         {/* Coaching Tip */}
         <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>💡 Lời khuyên rèn luyện tiếp theo:</Text>
+          <Text style={styles.tipTitle}>💡 Lời khuyên rèn luyện tiếp theo (Actionable Coaching Tip):</Text>
           <Text style={styles.tipBody}>{result.coaching_tip}</Text>
         </View>
 
         {/* Evidence Breakdown */}
-        <Text style={styles.breakdownHeading}>Chi tiết minh chứng theo Rubric:</Text>
+        <Text style={styles.breakdownHeading}>Chi tiết minh chứng theo Rubric (Server Verified):</Text>
         
         {result.evidence.map((item, idx) => (
           <View key={item.criterion_id || idx} style={styles.evidenceCard}>
             <View style={styles.evidenceHeader}>
               <View style={styles.critInfo}>
-                <Text style={styles.critId}>{item.criterion_id}</Text>
+                <Text style={styles.critId}>{item.criterion_id} (Trọng số: {item.weight}đ)</Text>
                 <Text style={styles.critLabel}>{item.label}</Text>
               </View>
               <View style={styles.badgeRow}>
                 {item.critical && (
                   <View style={styles.criticalTag}>
-                    <Text style={styles.criticalTagText}>Bắt buộc</Text>
+                    <Text style={styles.criticalTagText}>Critical</Text>
                   </View>
                 )}
                 <View style={[styles.critScoreTag, item.passed ? styles.greenTag : styles.redTag]}>
@@ -76,14 +84,16 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ result, onDone }) =>
 
             {item.exact_quote ? (
               <View style={styles.quoteBox}>
-                <Text style={styles.quoteLabel}>
-                  {item.quote_verified ? '🔍 Bằng chứng trích dẫn thực tế:' : '⚠️ Bằng chứng không khớp:'}
+                <Text style={[styles.quoteLabel, item.quote_verified ? { color: '#34D399' } : { color: '#F87171' }]}>
+                  {item.quote_verified 
+                    ? '✓ Bằng chứng nguyên văn (Exact Quote Verified):' 
+                    : '✗ Bằng chứng không khớp Transcript (Rejected):'}
                 </Text>
                 <Text style={styles.quoteText}>"{item.exact_quote}"</Text>
               </View>
             ) : (
               <View style={[styles.quoteBox, { backgroundColor: '#1E293B' }]}>
-                <Text style={styles.missingQuoteText}>Không tìm thấy bằng chứng phát ngôn phù hợp trong cuộc đối thoại.</Text>
+                <Text style={styles.missingQuoteText}>Không tìm thấy câu nói chứng minh đạt tiêu chí này trong hội thoại.</Text>
               </View>
             )}
 
@@ -98,7 +108,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ result, onDone }) =>
 
         {/* Done / Continue Button */}
         <TouchableOpacity style={styles.finishBtn} onPress={onDone}>
-          <Text style={styles.finishBtnText}>Hoàn tất bài luyện tập</Text>
+          <Text style={styles.finishBtnText}>← Quay lại Danh sách SOP & Lịch sử Phiên</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -112,7 +122,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
     backgroundColor: '#1E293B',
     borderBottomWidth: 1,
     borderBottomColor: '#334155',
@@ -120,8 +130,22 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#F8FAFC',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
+  },
+  telemetryBar: {
+    backgroundColor: '#020617',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+    alignItems: 'center',
+  },
+  telemetryText: {
+    color: '#38BDF8',
+    fontSize: 10,
+    fontFamily: 'monospace',
+    fontWeight: '600',
   },
   scrollContent: {
     padding: 16,
@@ -130,7 +154,7 @@ const styles = StyleSheet.create({
   scoreCard: {
     backgroundColor: '#1E293B',
     borderRadius: 16,
-    padding: 20,
+    padding: 18,
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
@@ -138,17 +162,17 @@ const styles = StyleSheet.create({
   },
   scoreLabel: {
     color: '#94A3B8',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginVertical: 10,
+    marginVertical: 8,
   },
   scoreNumber: {
-    fontSize: 54,
+    fontSize: 52,
     fontWeight: '900',
   },
   scoreGreen: {
@@ -193,18 +217,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 17,
   },
   tipCard: {
     backgroundColor: '#1E293B',
     borderRadius: 12,
     padding: 14,
-    marginBottom: 20,
+    marginBottom: 18,
     borderLeftWidth: 4,
     borderLeftColor: '#38BDF8',
   },
   tipTitle: {
     color: '#38BDF8',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     marginBottom: 4,
   },
@@ -215,9 +240,9 @@ const styles = StyleSheet.create({
   },
   breakdownHeading: {
     color: '#F1F5F9',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   evidenceCard: {
     backgroundColor: '#1E293B',
@@ -287,10 +312,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   quoteLabel: {
-    color: '#94A3B8',
     fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontWeight: '700',
+    marginBottom: 3,
   },
   quoteText: {
     color: '#E2E8F0',
@@ -304,11 +328,11 @@ const styles = StyleSheet.create({
   explanationText: {
     color: '#94A3B8',
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   disclaimerBox: {
-    padding: 12,
-    marginVertical: 12,
+    padding: 10,
+    marginVertical: 10,
     alignItems: 'center',
   },
   disclaimerText: {
@@ -325,7 +349,7 @@ const styles = StyleSheet.create({
   },
   finishBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
 });

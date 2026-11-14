@@ -58,12 +58,22 @@ export interface ModuleDraft {
 export interface TrainingSessionResponse {
   session_id: string;
   tenant_id: string;
+  sop_id?: string;
   sop_version_id: string;
+  sop_version_no: number;
   sop_title: string;
   module: ModuleDraft;
   completed: boolean;
   turns_count: number;
   ai_mode: string;
+  latency_ms?: number;
+}
+
+export interface TurnDetail {
+  turn_no: number;
+  employee_text: string;
+  customer_text: string;
+  created_at: string;
 }
 
 export interface TrainingTurnResponse {
@@ -74,6 +84,7 @@ export interface TrainingTurnResponse {
   remaining_turns: number;
   completed: boolean;
   ai_mode: string;
+  latency_ms?: number;
 }
 
 export interface EvaluationEvidence {
@@ -90,18 +101,51 @@ export interface EvaluationEvidence {
 export interface FinalResultResponse {
   session_id: string;
   sop_version_id: string;
+  sop_version_no?: number;
   score: number;
   passed: boolean;
   critical_failure: boolean;
   evidence: EvaluationEvidence[];
   coaching_tip: string;
   ai_mode: string;
+  latency_ms?: number;
   disclaimer: string;
+}
+
+export interface SessionSummaryItem {
+  session_id: string;
+  sop_id: string;
+  sop_title: string;
+  sop_version_id: string;
+  sop_version_no: number;
+  completed: boolean;
+  turns_count: number;
+  score?: number | null;
+  passed?: boolean | null;
+  critical_failure?: boolean | null;
+  ai_mode: string;
+  created_at: string;
+}
+
+export interface TrainingSessionDetailResponse {
+  session_id: string;
+  tenant_id: string;
+  sop_id: string;
+  sop_title: string;
+  sop_version_id: string;
+  sop_version_no: number;
+  module: ModuleDraft;
+  completed: boolean;
+  turns: TurnDetail[];
+  result?: FinalResultResponse | null;
+  ai_mode: string;
+  created_at: string;
 }
 
 export interface HealthResponse {
   status: string;
   ai_mode: string;
   live_ready: boolean;
+  gemini_model?: string;
   version: string;
 }

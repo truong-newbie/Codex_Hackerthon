@@ -1,6 +1,7 @@
 import { 
   TokenResponse, SOPDetailResponse, TrainingSessionResponse, 
-  TrainingTurnResponse, FinalResultResponse, HealthResponse 
+  TrainingTurnResponse, FinalResultResponse, HealthResponse,
+  SessionSummaryItem, TrainingSessionDetailResponse
 } from './types';
 
 class ApiClient {
@@ -8,7 +9,7 @@ class ApiClient {
   private token: string | null = null;
 
   setBaseUrl(url: string) {
-    this.baseUrl = url.replace(/\/+$/, '');
+    this.baseUrl = url.trim().replace(/\/+$/, '');
   }
 
   getBaseUrl(): string {
@@ -30,14 +31,19 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
+    // NFR-09: Network timeout controller (25s for live LLM requests)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
     try {
       const response = await fetch(url, {
         ...options,
         headers,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        let errorDetail = `Lỗi hệ thống (${response.status})`;
+        let errorDetail = `Lỗi máy chủ (HTTP ${response.status})`;
         try {
           const errData = await response.json();
           if (errData.detail) {
@@ -49,10 +55,15 @@ class ApiClient {
 
       return await response.json() as T;
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Yêu cầu quá thời gian chờ (Timeout 25s). Vui lòng thử lại.');
+      }
       if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
-        throw new Error(`Không thể kết nối máy chủ tại ${this.baseUrl}. Vui lòng kiểm tra lại cấu hình IP/URL.`);
+        throw new Error(`Không thể kết nối tới máy chủ tại ${this.baseUrl}. Vui lòng kiểm tra cấu hình IP/URL.`);
       }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -72,6 +83,14 @@ class ApiClient {
 
   async getSops(): Promise<SOPDetailResponse[]> {
     return this.request<SOPDetailResponse[]>('/v1/sops');
+  }
+
+  async getSessions(): Promise<SessionSummaryItem[]> {
+    return this.request<SessionSummaryItem[]>('/v1/training/sessions');
+  }
+
+  async getSessionDetail(sessionId: string): Promise<TrainingSessionDetailResponse> {
+    return this.request<TrainingSessionDetailResponse>(`/v1/training/${sessionId}`);
   }
 
   async startTraining(sopId: string): Promise<TrainingSessionResponse> {
