@@ -1,20 +1,24 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from ..models import SOP, SOPVersion, Tenant
+from ..models import SOP, SOPVersion
 from ..schemas import StepItem, RubricItem, SOPVersionDetail, SOPDetailResponse
 
 class SOPService:
     @staticmethod
-    def get_tenant_sops(db: Session, tenant_id: str) -> List[SOPDetailResponse]:
+    def get_tenant_sops(db: Session, tenant_id: str, role: str = "employee") -> List[SOPDetailResponse]:
         sops = db.query(SOP).filter(SOP.tenant_id == tenant_id).all()
         results = []
         for sop in sops:
             active_version_detail = None
             versions_list = []
             
-            for v in sop.versions:
+            for v in sorted(sop.versions, key=lambda x: x.version_no, reverse=True):
+                # FR-03: Draft versions must not be exposed to employees
+                if role != "manager" and v.status == "draft":
+                    continue
+                    
                 v_detail = SOPVersionDetail(
                     id=v.id,
                     sop_id=v.sop_id,
@@ -27,7 +31,7 @@ class SOPService:
                     created_at=v.created_at
                 )
                 versions_list.append(v_detail)
-                if sop.active_version_id == v.id:
+                if sop.active_version_id == v.id and v.status == "approved":
                     active_version_detail = v_detail
                     
             results.append(
@@ -53,7 +57,22 @@ class SOPService:
         if not sop:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy SOP")
             
-        # Validate rubric weights total = 100
+        # FR-04: Validate unique step IDs and non-empty instructions
+        step_ids = [s.id for s in steps]
+        if len(step_ids) != len(set(step_ids)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Danh sách các bước (steps) chứa ID bị trùng lặp"
+            )
+            
+        crit_ids = [r.id for r in rubric]
+        if len(crit_ids) != len(set(crit_ids)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Danh sách tiêu chí đánh giá (rubric) chứa ID bị trùng lặp"
+            )
+            
+        # BR-07: Validate rubric weights total = 100
         total_weight = sum(r.weight for r in rubric)
         if total_weight != 100:
             raise HTTPException(
@@ -99,12 +118,15 @@ class SOPService:
             
         sop = db.query(SOP).filter(SOP.id == version.sop_id, SOP.tenant_id == tenant_id).first()
         if not sop:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền truy cập SOP này")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy SOP thuộc cửa hàng của bạn")
             
         if version.status == "approved":
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phiên bản này đã được phê duyệt trước đó")
             
-        # Supersede old versions
+        if version.status == "superseded":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phiên bản cũ đã hết hiệu lực, vui lòng tạo bản thảo mới")
+            
+        # Supersede old approved versions
         old_versions = db.query(SOPVersion).filter(
             SOPVersion.sop_id == sop.id,
             SOPVersion.status == "approved"
@@ -114,7 +136,7 @@ class SOPService:
             
         version.status = "approved"
         version.approved_by = manager_id
-        version.approved_at = datetime.utcnow()
+        version.approved_at = datetime.now(timezone.utc)
         sop.active_version_id = version.id
         
         db.commit()
